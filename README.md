@@ -22,22 +22,37 @@ nr: 1235
 Some clever rationale comparing the driver support to MySQL and Oracle
 
 
-## Allow
+## Allow - Major PSQL version
 \`\`\`
 resource "aws_db_instance" * {
   engine = "postgres"
+  engine_version = XX.YY
 }
 \`\`\`
 
+## Allow - Major MySQL version
+\`\`\`
+resource "aws_db_instance" * {
+  engine = "mysql"
+  engine_version = XX.YY
+}
+\`\`\`
 
-## Deny
+## Deny - any other DB engine
+
 \`\`\`
 resource "aws_db_instance" * {
 }
 \`\`\`
 
-
 ...possibly more allow/deny blocks...
+
+## Exceptions
+
+* module.warehouse.aws_db_instance.main
+* id-123u04r902380
+* 
+* path/to/file.tf
 
 ```
 
