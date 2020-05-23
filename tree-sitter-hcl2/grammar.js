@@ -32,7 +32,6 @@ const grammarObject = {
 
   rules: {
     configuration: $ => repeat(choice(
-      $.var,
       $.resource,
       $.data,
       // $.provider,
@@ -73,16 +72,13 @@ const grammarObject = {
     ),
 
     _expression: $ => choice(
+      $.string_literal,
       $.boolean,
       $.number,
-      // $.string_literal,
       $.interpolation_string,
       alias($.block, $.map),
       $.list,
-      $.var,
     ),
-
-    var: $ => seq( 'var.', alias($.identifier, $.ref)),
 
     _initializer: $ => seq(
       '=',
@@ -174,8 +170,6 @@ const grammarObject = {
       $.sequence_expression,
     ),
 
-    _expression: $ => /[^}]/,
-
     _template_chars: $ => token(choice(repeat1(choice(
       /[^\\"$]/,
       /\$[^{"$]/,
@@ -191,7 +185,12 @@ const grammarObject = {
       ),
     )),
 
-    string_literal: $ => token(seq('"', repeat(choice(/[^\\"\n]/, /\\(.|\n)/)), '"')),
+    string_literal: $ => token(
+      seq(
+        '"',
+        repeat(/[^\\"]/),
+        '"'
+      )),
   },
 
 };

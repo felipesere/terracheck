@@ -1,0 +1,21 @@
+===
+A simple AMI
+===
+
+
+resource "aws_instance" "example" {
+  ami           = "XYZ-2757f631"
+  instance_type = "t2.micro"
+}
+
+
+---
+
+(configuration 
+  (resource 
+    (resource_type) 
+    (resource_name) 
+    (block 
+      (attribute (identifier) (string_literal))
+      (attribute (identifier) (string_literal))
+      )))
