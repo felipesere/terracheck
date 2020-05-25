@@ -85,3 +85,18 @@ variable "foos" {
     (type (tuple_ty (string_ty) (number_ty) (bool_ty))))))
 
 
+===
+Variable with description
+===
+
+variable "foo" {
+  type        = string
+  description = "a foo"
+}
+
+---
+
+(configuration
+  (variable (variable_name) (variable_block
+    (type (string_ty))
+    (description))))

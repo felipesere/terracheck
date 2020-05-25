@@ -54,7 +54,9 @@ const grammarObject = {
       $.variable_block,
     ),
 
-    variable_block: $ => seq('{', $.type, repeat($.attribute), '}'),
+    variable_block: $ => seq('{', $.type, optional($._description), '}'),
+
+    _description: $ => seq("description", "=", alias($.string_literal, $.description)),
 
     type: $ => seq("type", "=", $._types),
 
