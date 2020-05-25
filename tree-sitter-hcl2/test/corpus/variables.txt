@@ -25,3 +25,17 @@ variable "how_many" {
 
   (variable (variable_name) (variable_block
     (type (number_ty)))))
+
+===
+Complex constructed types
+===
+
+variable "foos" {
+  type = list(string)
+}
+
+---
+
+(configuration
+  (variable (variable_name) (variable_block
+    (type (list_ty (string_ty))))))

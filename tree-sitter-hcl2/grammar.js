@@ -58,7 +58,10 @@ const grammarObject = {
       alias("bool", $.bool_ty),
       alias("string", $.string_ty),
       alias("number", $.number_ty),
+      $.list_ty,
     ),
+
+    list_ty: $ => seq("list", "(", $._types, ")"),
 
     resource: $ => seq(
       'resource',
