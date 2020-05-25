@@ -1,11 +1,14 @@
 ===
-A resource with two simple string literal fields
+A resource with basic attributes
 ===
 
 
 resource "aws_instance" "example" {
   ami           = "XYZ-2757f631"
-  instance_type = "t2.micro"
+  foo_t           = true
+  bar_f           = false
+  num             = 987654321
+  many            = ["one", "two"]
 }
 
 
@@ -17,7 +20,10 @@ resource "aws_instance" "example" {
     (resource_name)
     (block
       (attribute (identifier) (string_literal))
-      (attribute (identifier) (string_literal))
+      (attribute (identifier) (boolean))
+      (attribute (identifier) (boolean))
+      (attribute (identifier) (number))
+      (attribute (identifier) (list (string_literal) (string_literal)))
       )))
 
 ===
