@@ -19,6 +19,10 @@ function commaSep(rule) {
   return optional(commaSep1(rule));
 }
 
+function constructedType(name, rule) {
+  return seq(name, "(", rule, ")")
+}
+
 const grammarObject = {
   name: 'terraform',
 
@@ -59,9 +63,13 @@ const grammarObject = {
       alias("string", $.string_ty),
       alias("number", $.number_ty),
       $.list_ty,
+      $.set_ty,
+      $.map_ty,
     ),
 
-    list_ty: $ => seq("list", "(", $._types, ")"),
+    list_ty: $ => constructedType("list", $._types),
+    set_ty: $ => constructedType("set", $._types),
+    map_ty: $ => constructedType("map", $._types),
 
     resource: $ => seq(
       'resource',
