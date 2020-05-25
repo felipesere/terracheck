@@ -6,6 +6,9 @@ const PREC = {
   VAR: 2,
 };
 
+
+// alias(foo, bar): Parse as `foo`, but name it `bar`
+
 // TODO - nick the heredoc stuff from tree-sitter-bash for multiline strings
 
 function commaSep1(rule) {
