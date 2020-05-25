@@ -1,0 +1,13 @@
+===
+Simple string variable
+===
+
+variable "image_id" {
+  type = string
+}
+
+---
+
+(configuration 
+  (variable (variable_name) (variable_block
+    (type))))
