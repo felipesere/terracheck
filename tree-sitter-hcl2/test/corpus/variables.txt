@@ -6,8 +6,22 @@ variable "image_id" {
   type = string
 }
 
+variable "create" {
+  type = bool
+}
+
+variable "how_many" {
+  type = number
+}
+
 ---
 
-(configuration 
+(configuration
   (variable (variable_name) (variable_block
-    (type))))
+    (type (string_ty))))
+
+  (variable (variable_name) (variable_block
+    (type (bool_ty))))
+
+  (variable (variable_name) (variable_block
+    (type (number_ty)))))

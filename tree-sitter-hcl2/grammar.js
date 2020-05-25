@@ -47,7 +47,17 @@ const grammarObject = {
     variable: $ => seq(
       'variable',
       alias($.string_literal, $.variable_name),
-      $.block,
+      $.variable_block,
+    ),
+
+    variable_block: $ => seq('{', $.type, repeat($.attribute), '}'),
+
+    type: $ => seq("type", "=", $._types),
+
+    _types: $ => choice(
+      alias("bool", $.bool_ty),
+      alias("string", $.string_ty),
+      alias("number", $.number_ty),
     ),
 
     resource: $ => seq(
