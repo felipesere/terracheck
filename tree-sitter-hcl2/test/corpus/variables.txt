@@ -70,4 +70,18 @@ variable "foos" {
       (object_field (field_name) (bool_ty))
       (object_field (field_name) (list_ty (string_ty))))))))
 
+===
+Constructed tuple type
+===
+
+variable "foos" {
+  type = tuple([string, number, bool])
+}
+
+---
+
+(configuration
+  (variable (variable_name) (variable_block
+    (type (tuple_ty (string_ty) (number_ty) (bool_ty))))))
+
 
