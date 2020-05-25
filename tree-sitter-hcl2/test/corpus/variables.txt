@@ -53,3 +53,21 @@ variable "maps" {
 
   (variable (variable_name) (variable_block
     (type (map_ty (number_ty))))))
+
+===
+Constructed object type
+===
+
+variable "foos" {
+  type = object({left = bool, right = list(string)})
+}
+
+---
+
+(configuration
+  (variable (variable_name) (variable_block
+    (type (object_ty
+      (object_field (field_name) (bool_ty))
+      (object_field (field_name) (list_ty (string_ty))))))))
+
+

@@ -65,11 +65,21 @@ const grammarObject = {
       $.list_ty,
       $.set_ty,
       $.map_ty,
+      $.object_ty,
     ),
 
     list_ty: $ => constructedType("list", $._types),
     set_ty: $ => constructedType("set", $._types),
     map_ty: $ => constructedType("map", $._types),
+    object_ty: $ => seq( 'object',
+      '(',
+      '{',
+        commaSep($.object_field),
+      '}',
+      ')'
+    ),
+
+    object_field: $ => seq(alias($.identifier, $.field_name), "=", $._types),
 
     resource: $ => seq(
       'resource',
