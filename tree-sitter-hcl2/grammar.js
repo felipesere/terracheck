@@ -21,12 +21,6 @@ function constructedType(name, rule) {
 const grammarObject = {
   name: 'terraform',
 
-  /*
-  externals: $ => [
-    $._template_chars,
-  ],
-  */
-
   extras: $ => [
     $.comment,
     /[\s\uFEFF\u2060\u200B\u00A0]/,
