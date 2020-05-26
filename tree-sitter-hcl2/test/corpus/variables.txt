@@ -100,3 +100,28 @@ variable "foo" {
   (variable (variable_name) (variable_block
     (type (string_ty))
     (description))))
+
+===
+Variable with default
+===
+
+variable "foo" {
+  type    = string
+  default = "something"
+}
+
+variable "bar" {
+  type    = list(number)
+  default = [1, 2, 3]
+}
+
+---
+
+(configuration
+  (variable (variable_name) (variable_block
+    (type (string_ty))
+    (default (string_literal))))
+
+  (variable (variable_name) (variable_block
+    (type (list_ty (number_ty)))
+    (default (list (number) (number) (number))))))

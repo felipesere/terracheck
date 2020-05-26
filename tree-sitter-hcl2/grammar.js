@@ -54,9 +54,15 @@ const grammarObject = {
       $.variable_block,
     ),
 
-    variable_block: $ => seq('{', $.type, optional($._description), '}'),
+    variable_block: $ => seq('{',
+      $.type,
+      optional($._description),
+      optional($.default),
+    '}'),
 
     _description: $ => seq("description", "=", alias($.string_literal, $.description)),
+
+    default: $ => seq("default", "=", $._expression),
 
     type: $ => seq("type", "=", $._types),
 
@@ -129,7 +135,7 @@ const grammarObject = {
 
     list: $ => seq(
       '[',
-      commaSep($.string_literal),
+      commaSep($._expression),
       optional(','),
       ']',
     ),
