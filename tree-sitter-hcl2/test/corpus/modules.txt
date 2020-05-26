@@ -1,0 +1,16 @@
+===
+Simple module
+===
+
+module "servers" {
+  source = "./app-cluster"
+
+  servers = 5
+}
+
+---
+
+(configuration
+  (module (module_name)
+    (source)
+    (attribute (identifier) (number))))

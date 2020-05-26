@@ -34,7 +34,7 @@ const grammarObject = {
       $.variable,
       $.output,
       $.locals,
-      // $.module,
+      $.module,
     )),
 
     variable: $ => seq(
@@ -83,6 +83,12 @@ const grammarObject = {
     provider: $ => seq('provider', alias($.string_literal, $.provider_name), $.block),
 
     output: $ => seq('output', alias($.string_literal, $.output_name), $.block),
+
+    module: $ => seq('module', alias($.string_literal, $.module_name), $._module_definition),
+
+    _module_definition: $ => seq('{', $._source,  repeat($.attribute), '}'),
+
+    _source: $ => seq('source', '=', alias($.string_literal, $.source)),
 
     resource: $ => seq(
       'resource',
