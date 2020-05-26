@@ -38,7 +38,7 @@ const grammarObject = {
       $.data,
       $.provider,
       $.variable,
-      // $.output,
+      $.output,
       $.locals,
       // $.module,
     )),
@@ -88,6 +88,8 @@ const grammarObject = {
 
     provider: $ => seq('provider', alias($.string_literal, $.provider_name), $.block),
 
+    output: $ => seq('output', alias($.string_literal, $.output_name), $.block),
+
     resource: $ => seq(
       'resource',
       alias($.string_literal, $.resource_type),
@@ -114,6 +116,7 @@ const grammarObject = {
 
     _expression: $ => choice(
       $.string_literal,
+      $.reference,
       $.boolean,
       $.number,
       $.interpolation_string,
@@ -141,6 +144,13 @@ const grammarObject = {
     identifier: ($) => {
       const alpha = /[a-zA-Z]+/;
       const alphaNumeric = /[a-zA-Z0-9-_]+/;
+
+      return token(seq(alpha, repeat(alphaNumeric)));
+    },
+
+    reference: $ => {
+      const alpha = /[a-zA-Z]+/;
+      const alphaNumeric = /[a-zA-Z0-9-_\.]+/;
 
       return token(seq(alpha, repeat(alphaNumeric)));
     },
