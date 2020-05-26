@@ -41,7 +41,7 @@ const grammarObject = {
     configuration: $ => repeat(choice(
       $.resource,
       $.data,
-      // $.provider,
+      $.provider,
       $.variable,
       // $.output,
       $.locals,
@@ -89,6 +89,9 @@ const grammarObject = {
     ),
     object_field: $ => seq(alias($.identifier, $.field_name), "=", $._types),
     tuple_ty: $ => seq('tuple', '(', '[', commaSep($._types), ']', ')'),
+
+
+    provider: $ => seq('provider', alias($.string_literal, $.provider_name), $.block),
 
     resource: $ => seq(
       'resource',
