@@ -1,0 +1,16 @@
+===
+Simple local
+===
+
+locals {
+  ami = "a-123"
+  age = 76
+}
+
+---
+
+(configuration
+  (locals
+    (block
+      (attribute (identifier) (string_literal))
+      (attribute (identifier) (number)))))
