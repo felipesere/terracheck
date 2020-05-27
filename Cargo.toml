@@ -3,9 +3,9 @@ authors = ["Felipe Sere <felipesere@gmail.com>"]
 edition = "2018"
 name = "terracheck"
 version = "0.1.0"
+[build-dependencies]
+cc = "*"
 
 [dependencies]
+glob = "*"
 tree-sitter = "*"
-
-[build-dependencies]
-cc="*"
