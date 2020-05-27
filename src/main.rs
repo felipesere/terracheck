@@ -1,6 +1,7 @@
 use glob::glob;
-use tree_sitter::{Language, Parser, Query, QueryCursor};
+use std::env;
 use std::fs::read_to_string;
+use tree_sitter::{Language, Parser, Query, QueryCursor};
 
 fn main() {
     extern "C" {
@@ -11,8 +12,10 @@ fn main() {
     let language = unsafe { tree_sitter_terraform() };
     parser.set_language(language).unwrap();
 
-    let query =
-        Query::new(language, "(attribute (identifier) @i (number) @v)").expect("unworkable query");
+    let file = env::args().skip(1).next().expect("Need a path to a query");
+    let content = read_to_string(file).unwrap();
+
+    let query = Query::new(language, &content).expect("unworkable query");
 
     let mut cursor = QueryCursor::new();
     for entry in glob("**/*.tf").expect("Failed to read glob pattern") {
