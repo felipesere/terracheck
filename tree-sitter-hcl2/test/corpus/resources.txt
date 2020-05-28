@@ -9,8 +9,8 @@ resource "aws_instance" "example" {
   bar_f           = false
   num             = 987654321
   many            = ["one", "two"]
+  ref             = var.lambda_deployment_role_id
 }
-
 
 ---
 
@@ -24,6 +24,7 @@ resource "aws_instance" "example" {
       (attribute (identifier) (boolean))
       (attribute (identifier) (number))
       (attribute (identifier) (list (string_literal) (string_literal)))
+      (attribute (identifier) (reference))
       )))
 
 ===
