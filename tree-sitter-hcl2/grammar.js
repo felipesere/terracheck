@@ -122,7 +122,27 @@ const grammarObject = {
       $.interpolation_string,
       alias($.block, $.map),
       $.list,
+      $._operation,
     ),
+
+    _operation: $ => choice(
+      $.ternary,
+    ),
+
+    ternary: $ => seq($._booleanExpression, "?", $._expression, ":", $._expression),
+
+    _booleanExpression: $ => choice(
+      $.comparison,
+    ),
+
+    comparison: $ => prec(10, seq($._expression, $._comparisonOperator , $._expression)),
+
+    _comparisonOperator: $ => choice(
+      alias("==", $.eq),
+      alias(">", $.gt),
+      alias("<", $.lt),
+    ),
+
 
     _initializer: $ => seq(
       '=',
