@@ -51,7 +51,6 @@ resource "aws_db_instance" * {
 
 * module.warehouse.aws_db_instance.main
 * id-123u04r902380
-* 
 * path/to/file.tf
 
 ```
@@ -66,4 +65,50 @@ There would be some mechanism for describing placeholders and constraints on att
 It would be fun to try and lift terraform files to AST and then match that against
 a representation of the rules.
 
-This could be useful to parse terraform [tree-sitter](https://github.com/tree-sitter/tree-sitter)
+We can use [tree-sitter](https://github.com/tree-sitter/tree-sitter) to parse Terraform files into AST
+and run queries against it.
+
+For example, if we had the following terraform:
+
+```terraform
+resource "aws_lb" "main" {
+  name               = var.service_name
+  subnets            = var.public_subnet_ids
+  security_groups    = [aws_security_group.main.id]
+  idle_timeout       = 900
+  load_balancer_type = "application"
+
+  enable_deletion_protection = false
+
+  access_logs {
+    bucket  = var.access_logs_bucket_name
+    enabled = true
+    prefix  = var.service_name
+  }
+}
+```
+
+it would be nice if the following rule matched it:
+
+```
+resource "aws_lb" * {
+  enable_deletion_protection = false
+}
+```
+
+The semantically equivalent query in `tree-sitter` looks like this:
+
+```lisp
+(
+  (resource
+    (resource_type) @type
+    (block
+      (attribute
+        (identifier) @id
+        (boolean) @val
+  )))
+  (#eq? @type "\"aws_lb\"")
+  (#eq? @id "enable_deletion_protection")
+  (#eq? @val true)
+) @result
+```
