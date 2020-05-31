@@ -1,7 +1,7 @@
 use glob::glob;
 use std::env;
 use std::fs::read_to_string;
-use tree_sitter::{Language, Parser, Query, QueryCursor};
+use tree_sitter::{Language, Parser, Query, QueryCursor, Node};
 
 fn main() {
     extern "C" {
@@ -25,11 +25,28 @@ fn main() {
 
                 let tree = parser.parse(&content, None).unwrap();
 
-                let matches = cursor.matches(&query, tree.root_node(), |_node| "");
+                let text_callback = |n: Node| &content[n.byte_range()];
+
+                let mut matches = cursor
+                    .matches(&query, tree.root_node(), text_callback)
+                    .peekable();
+
+                if matches.peek().is_none() {
+                    continue;
+                }
+
+                println!("\n{}", path.to_str().unwrap());
 
                 for m in matches {
                     for capture in m.captures {
+                        let name = &query.capture_names()[capture.index as usize];
+
+                        if name != "result" {
+                            continue;
+                        }
                         println!("{}", capture.node.utf8_text(&content.as_bytes()).unwrap());
+                        println!("{}", capture.node.to_sexp());
+                        println!("");
                     }
                 }
             }
