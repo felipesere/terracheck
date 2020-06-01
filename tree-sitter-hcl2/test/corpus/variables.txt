@@ -1,4 +1,15 @@
 ===
+Variable without type
+===
+
+variable "db_allocated_storage" {}
+
+---
+
+(configuration
+  (variable (variable_name) (variable_block)))
+
+===
 Simple string variable
 ===
 

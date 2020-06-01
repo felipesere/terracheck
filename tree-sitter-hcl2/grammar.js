@@ -44,7 +44,7 @@ const grammarObject = {
     ),
 
     variable_block: $ => seq('{',
-      $.type,
+      optional($.type),
       optional($._description),
       optional($.default),
     '}'),
