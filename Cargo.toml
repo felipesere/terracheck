@@ -9,3 +9,5 @@ cc = "*"
 [dependencies]
 glob = "*"
 tree-sitter = "*"
+clap = "3.0.0-beta.1"
+colored = "1.9.3"

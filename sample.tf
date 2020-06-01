@@ -1,4 +1,8 @@
 resource "aws_rds_instance" "my-db" {
-  ami = "something_really_cool"
+  size = "t2.large"
   num = 12
+}
+
+resource "aws_ami" "pc" {
+  ami = "something_really_cool"
 }

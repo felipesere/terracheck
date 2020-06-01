@@ -1,22 +1,49 @@
+use clap::{App, Arg};
+use colored::*;
 use glob::glob;
-use std::env;
 use std::fs::read_to_string;
-use tree_sitter::{Language, Parser, Query, QueryCursor, Node};
+use tree_sitter::{Language, Node, Parser, Query, QueryCursor};
 
 fn main() {
     extern "C" {
         fn tree_sitter_terraform() -> Language;
     }
 
+    let matches = App::new("My Super Program")
+        .version("0.1")
+        .about("Checks terraform files for patterns")
+        .subcommand(
+            App::new("query").arg(
+                Arg::new("query_file")
+                    .about("Runs a query and prints matches that bind to '@result'")
+                    .value_name("QUERY_FILE")
+                    .takes_value(true)
+                    .required(true),
+            ),
+        )
+        .subcommand(App::new("show").about("Prints everythinng that was parsed"))
+        .get_matches();
+
     let mut parser = Parser::new();
     let language = unsafe { tree_sitter_terraform() };
     parser.set_language(language).unwrap();
 
-    let file = env::args().skip(1).next().expect("Need a path to a query");
-    let content = read_to_string(file).unwrap();
+    match matches.subcommand() {
+        ("query", Some(query_matches)) => {
+            let file = query_matches.value_of("QUERY_FILE").unwrap();
+            let content = read_to_string(file).unwrap();
 
-    let query = Query::new(language, &content).expect("unworkable query");
+            let query = Query::new(language, &content).expect("unworkable query");
 
+            run_query(parser, query)
+        }
+
+        ("show", _) => parse_all(parser),
+        _ => println!("Unknown command"),
+    }
+}
+
+fn run_query(mut parser: Parser, query: Query) {
     let mut cursor = QueryCursor::new();
     for entry in glob("**/*.tf").expect("Failed to read glob pattern") {
         match entry {
@@ -49,6 +76,36 @@ fn main() {
                         println!("");
                     }
                 }
+            }
+            Err(e) => println!("{:?}", e),
+        }
+    }
+}
+
+fn parse_all(mut parser: Parser) {
+    for entry in glob("**/*.tf").expect("Failed to read glob pattern") {
+        match entry {
+            Ok(path) => {
+                let content = read_to_string(&path).unwrap();
+                println!("*****");
+                println!("{}", path.to_str().unwrap().blue());
+
+                let tree = parser.parse(&content, None).unwrap();
+
+                let mut cursor = tree.root_node().walk();
+                // Skip (comfiguration)
+                cursor.goto_first_child();
+                loop {
+                    let node = cursor.node();
+                    println!("{}", node.utf8_text(&content.as_bytes()).unwrap());
+                    println!("{}", node.to_sexp());
+                    println!("");
+                    if !cursor.goto_next_sibling() {
+                        break;
+                    }
+                }
+
+                println!("");
             }
             Err(e) => println!("{:?}", e),
         }
