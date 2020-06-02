@@ -183,7 +183,7 @@ const grammarObject = {
 
     reference: $ => {
       const alpha = /[a-zA-Z]/;
-      const alphaNumeric = /[a-zA-Z0-9-_\.]+/;
+      const alphaNumeric = /[a-zA-Z0-9-_\.\[\]]+/;
 
       return token(seq(alpha, repeat(alphaNumeric)));
     },

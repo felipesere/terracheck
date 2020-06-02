@@ -86,4 +86,24 @@ resource "aws_security_group" "main" {
     (block
      (attribute (identifier) (function (fn_param (reference)))))))
 
+===
+resource with array access on a property
+===
+
+
+resource "aws_api_gateway_method" "main" {
+  for_each = var.endpoints
+
+  resource_id      = aws_api_gateway_resource.route-nodes[each.key].id
+}
+
+---
+
+(configuration
+  (resource
+    (resource_type)
+    (resource_name)
+    (block
+     (attribute (identifier) (reference))
+     (attribute (identifier) (reference)))))
 
