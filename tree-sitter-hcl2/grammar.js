@@ -148,7 +148,11 @@ const grammarObject = {
       alias("<", $.lt),
     ),
 
-    function: $ => seq("merge", "(", repeat(seq($.fn_param, optional(','))), ")"),
+    function: $ => seq(choice(
+      "merge",
+      "length",
+    ),
+    "(", repeat(seq($.fn_param, optional(','))), ")"),
 
     fn_param: $ => $._expression,
 

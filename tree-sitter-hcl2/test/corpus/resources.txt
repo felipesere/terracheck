@@ -67,3 +67,23 @@ resource "aws_security_group" "main" {
     (block
       (attribute (identifier) (function (fn_param (reference)) (fn_param (map (attribute (identifier) (string_literal)))))))))
 
+
+===
+length function
+===
+
+
+resource "aws_security_group" "main" {
+  tags   = length(var.default_tags)
+}
+
+---
+
+(configuration
+  (resource
+    (resource_type)
+    (resource_name)
+    (block
+     (attribute (identifier) (function (fn_param (reference)))))))
+
+
