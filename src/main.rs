@@ -21,7 +21,17 @@ fn main() {
                     .required(true),
             ),
         )
-        .subcommand(App::new("show").about("Prints everythinng that was parsed"))
+        .subcommand(
+            App::new("show")
+                .arg(
+                    Arg::new("error_only")
+                        .about("only print errors for easier debugging")
+                        .long("--errors")
+                        .short('e')
+                        .required(false),
+                )
+                .about("Prints everythinng that was parsed"),
+        )
         .get_matches();
 
     let mut parser = Parser::new();
@@ -38,7 +48,7 @@ fn main() {
             run_query(parser, query)
         }
 
-        ("show", _) => parse_all(parser),
+        ("show", Some(show_matches)) => parse_all(parser, show_matches.is_present("error_only")),
         _ => println!("Unknown command"),
     }
 }
@@ -82,7 +92,7 @@ fn run_query(mut parser: Parser, query: Query) {
     }
 }
 
-fn parse_all(mut parser: Parser) {
+fn parse_all(mut parser: Parser, only_errors: bool) {
     for entry in glob("**/*.tf").expect("Failed to read glob pattern") {
         match entry {
             Ok(path) => {
@@ -98,14 +108,16 @@ fn parse_all(mut parser: Parser) {
                 loop {
                     let node = cursor.node();
 
-                    if !node.has_error() {
-                        println!("{}", node.utf8_text(&content.as_bytes()).unwrap());
-                        println!("{}", node.to_sexp());
-                    } else {
+                    if node.has_error() {
                         println!("{}", node.utf8_text(&content.as_bytes()).unwrap().red());
                         println!("{}", node.to_sexp().red());
+                        println!("");
+                    } else if !only_errors {
+                        println!("{}", node.utf8_text(&content.as_bytes()).unwrap());
+                        println!("{}", node.to_sexp());
+                        println!("");
                     }
-                    println!("");
+
                     if !cursor.goto_next_sibling() {
                         break;
                     }
