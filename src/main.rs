@@ -97,8 +97,14 @@ fn parse_all(mut parser: Parser) {
                 cursor.goto_first_child();
                 loop {
                     let node = cursor.node();
-                    println!("{}", node.utf8_text(&content.as_bytes()).unwrap());
-                    println!("{}", node.to_sexp());
+
+                    if !node.has_error() {
+                        println!("{}", node.utf8_text(&content.as_bytes()).unwrap());
+                        println!("{}", node.to_sexp());
+                    } else {
+                        println!("{}", node.utf8_text(&content.as_bytes()).unwrap().red());
+                        println!("{}", node.to_sexp().red());
+                    }
                     println!("");
                     if !cursor.goto_next_sibling() {
                         break;
