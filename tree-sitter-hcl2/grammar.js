@@ -14,6 +14,10 @@ function commaSep(rule) {
   return optional(commaSep1(rule));
 }
 
+function maybeCommaSep(rule) {
+  return repeat(seq(rule, optional(',')))
+}
+
 function constructedType(name, rule) {
   return seq(name, "(", rule, ")")
 }
@@ -72,7 +76,7 @@ const grammarObject = {
     object_ty: $ => seq( 'object',
       '(',
       '{',
-        commaSep($.object_field),
+        maybeCommaSep($.object_field),
       '}',
       ')'
     ),

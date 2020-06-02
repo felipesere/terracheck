@@ -69,8 +69,16 @@ variable "maps" {
 Constructed object type
 ===
 
+
 variable "foos" {
   type = object({left = bool, right = list(string)})
+}
+
+variable "vpc" {
+  type = object({
+    vpc_id     = string,
+    cidr_block = string,
+  })
 }
 
 ---
@@ -79,7 +87,11 @@ variable "foos" {
   (variable (variable_name) (variable_block
     (type (object_ty
       (object_field (field_name) (bool_ty))
-      (object_field (field_name) (list_ty (string_ty))))))))
+      (object_field (field_name) (list_ty (string_ty)))))))
+  (variable (variable_name) (variable_block
+    (type (object_ty
+      (object_field (field_name) (string_ty))
+      (object_field (field_name) (string_ty)))))))
 
 ===
 Constructed tuple type
