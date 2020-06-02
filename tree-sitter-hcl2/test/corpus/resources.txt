@@ -49,3 +49,21 @@ resource "aws_instance" "example" {
       (attribute
         (named_map (identifier) (map
                                   (attribute (identifier) (string_literal))))))))
+
+===
+a resource with a function value
+===
+
+resource "aws_security_group" "main" {
+  tags   = merge(var.default_tags, { Name = "gladis-api" })
+}
+
+---
+
+(configuration
+  (resource
+    (resource_type)
+    (resource_name)
+    (block
+      (attribute (identifier) (function (fn_param (reference)) (fn_param (map (attribute (identifier) (string_literal)))))))))
+

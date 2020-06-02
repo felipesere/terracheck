@@ -120,13 +120,14 @@ const grammarObject = {
 
     _expression: $ => choice(
       $.string_literal,
-      $.reference,
       $.boolean,
       $.number,
       $.interpolation_string,
       alias($.block, $.map),
       $.list,
       $._operation,
+      prec(10, $.function),
+      $.reference,
     ),
 
     _operation: $ => choice(
@@ -146,6 +147,10 @@ const grammarObject = {
       alias(">", $.gt),
       alias("<", $.lt),
     ),
+
+    function: $ => seq("merge", "(", repeat(seq($.fn_param, optional(','))), ")"),
+
+    fn_param: $ => $._expression,
 
 
     _initializer: $ => seq(
@@ -173,7 +178,7 @@ const grammarObject = {
     },
 
     reference: $ => {
-      const alpha = /[a-zA-Z]+/;
+      const alpha = /[a-zA-Z]/;
       const alphaNumeric = /[a-zA-Z0-9-_\.]+/;
 
       return token(seq(alpha, repeat(alphaNumeric)));
