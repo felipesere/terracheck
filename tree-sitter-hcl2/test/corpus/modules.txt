@@ -14,3 +14,28 @@ module "servers" {
   (module (module_name)
     (source)
     (attribute (identifier) (number))))
+
+===
+Module with named map
+===
+
+
+module "request_pipeline_from_cloudwatch_to_s3" {
+  source = "./modules/api-request-logging"
+
+  storage_bucket_name = "dp-gladis-api-requests-${var.environment}"
+
+  filter_mappings = {
+    "gladis-api-v2-quotes-requests"    = module.api-2-0-quotes-lambda.log_group_name
+    "gladis-api-v2-policies-requests"  = module.api-2-0-policies-lambda.log_group_name
+  }
+}
+
+---
+
+(configuration
+  (module (module_name) (source)
+    (attribute (identifier) (string_literal))
+    (attribute (identifier) (map
+      (keyValue (string_literal) (reference))
+      (keyValue (string_literal) (reference))))))

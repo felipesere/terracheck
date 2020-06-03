@@ -65,7 +65,7 @@ resource "aws_security_group" "main" {
     (resource_type)
     (resource_name)
     (block
-      (attribute (identifier) (function (fn_param (reference)) (fn_param (map (attribute (identifier) (string_literal)))))))))
+      (attribute (identifier) (function (fn_param (reference)) (fn_param (map (keyValue (identifier) (string_literal)))))))))
 
 
 ===

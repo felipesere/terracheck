@@ -123,12 +123,18 @@ const grammarObject = {
       $.boolean,
       $.number,
       $.interpolation_string,
-      alias($.block, $.map),
+      $.map,
       $.list,
       $._operation,
       prec(10, $.function),
       $.reference,
     ),
+
+    map: $ => seq("{", maybeCommaSep($.keyValue), "}"),
+
+    keyValue: $ => seq($._stringLike, "=", $._expression),
+
+    _stringLike: $ => choice($.identifier, $.string_literal),
 
     _operation: $ => choice(
       $.ternary,
