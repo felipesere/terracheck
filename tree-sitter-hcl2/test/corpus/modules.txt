@@ -11,9 +11,9 @@ module "servers" {
 ---
 
 (configuration
-  (module (module_name)
-    (source)
-    (attribute (identifier) (number))))
+  (module (module_name) (block
+    (attribute (identifier) (string_literal))
+    (attribute (identifier) (number)))))
 
 ===
 Module with named map
@@ -34,8 +34,31 @@ module "request_pipeline_from_cloudwatch_to_s3" {
 ---
 
 (configuration
-  (module (module_name) (source)
+  (module (module_name) (block
+    (attribute (identifier) (string_literal))
     (attribute (identifier) (string_literal))
     (attribute (identifier) (map
       (keyValue (string_literal) (reference))
-      (keyValue (string_literal) (reference))))))
+      (keyValue (string_literal) (reference)))))))
+
+===
+Module with provider
+===
+
+module "docs_domain_certificate" {
+  providers = {
+    aws = aws.us-east-1
+  }
+
+  source = "git@gitlab.com:mrdp-tech/terraform-module-registry.git//modules/domain_certificate"
+}
+
+---
+
+(configuration
+  (module (module_name) (block
+    (attribute (identifier) (map
+      (keyValue (identifier) (reference))))
+    (attribute (identifier) (string_literal)))))
+
+

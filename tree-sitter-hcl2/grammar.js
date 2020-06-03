@@ -88,11 +88,7 @@ const grammarObject = {
 
     output: $ => seq('output', alias($.string_literal, $.output_name), $.block),
 
-    module: $ => seq('module', alias($.string_literal, $.module_name), $._module_definition),
-
-    _module_definition: $ => seq('{', $._source,  repeat($.attribute), '}'),
-
-    _source: $ => seq('source', '=', alias($.string_literal, $.source)),
+    module: $ => seq('module', alias($.string_literal, $.module_name), $.block),
 
     resource: $ => seq(
       'resource',

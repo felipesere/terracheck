@@ -1,5 +1,5 @@
 ===
-Sampl AMI data resource
+Sample AMI data resource
 ===
 
 data "aws_ami" "example" {
@@ -24,7 +24,7 @@ data "aws_ami" "example" {
       )))))
 
 ===
-Sampl AMI data resource
+Map with commas at the end
 ===
 
 data "aws_ami" "example" {
