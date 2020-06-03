@@ -107,3 +107,17 @@ resource "aws_api_gateway_method" "main" {
      (attribute (identifier) (reference))
      (attribute (identifier) (reference)))))
 
+===
+reference in list without square brackets
+===
+
+resource "aws_security_group_rule" "s3" {
+  prefix_list_ids   = [var.s3_prefix_list_id]
+}
+
+---
+
+(configuration
+  (resource (resource_type) (resource_name)
+    (block
+      (attribute (identifier) (list (reference))))))

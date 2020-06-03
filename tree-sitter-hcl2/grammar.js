@@ -183,9 +183,10 @@ const grammarObject = {
 
     reference: $ => {
       const alpha = /[a-zA-Z]/;
-      const alphaNumeric = /[a-zA-Z0-9-_\.\[\]]+/;
+      const alphaNumeric = /[a-zA-Z0-9-_\.]+/;
+      const bracketed = seq("[", alphaNumeric, "]")
 
-      return token(seq(alpha, repeat(alphaNumeric)));
+      return token(seq(alpha, repeat(choice(bracketed, alphaNumeric))));
     },
 
     comment: $ => token(prec(PREC.COMMENT, choice(
