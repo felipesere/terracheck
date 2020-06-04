@@ -48,10 +48,14 @@ const grammarObject = {
     ),
 
     variable_block: $ => seq('{',
-      optional($.type),
-      optional($._description),
-      optional($.default),
+      repeat($._typeOrDescriptionOrDefault),
     '}'),
+
+    _typeOrDescriptionOrDefault: $ => choice(
+      $.type,
+      $._description,
+      $.default,
+    ),
 
     _description: $ => seq("description", "=", alias($.string_literal, $.description)),
 

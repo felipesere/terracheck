@@ -138,9 +138,10 @@ variable "bar" {
   default = [1, 2, 3]
 }
 
-variable "batz" {
-  type    = map(string)
-  default = {}
+variable "environment_variables" {
+  type        = map(string)
+  default     = {}
+  description = "A list of environment variables."
 }
 
 ---
@@ -156,4 +157,5 @@ variable "batz" {
 
   (variable (variable_name) (variable_block
     (type (map_ty (string_ty)))
-    (default (map)))))
+    (default (map))
+    (description))))
