@@ -138,6 +138,11 @@ variable "bar" {
   default = [1, 2, 3]
 }
 
+variable "batz" {
+  type    = map(string)
+  default = {}
+}
+
 ---
 
 (configuration
@@ -147,4 +152,8 @@ variable "bar" {
 
   (variable (variable_name) (variable_block
     (type (list_ty (number_ty)))
-    (default (list (number) (number) (number))))))
+    (default (list (number) (number) (number)))))
+
+  (variable (variable_name) (variable_block
+    (type (map_ty (string_ty)))
+    (default (map)))))

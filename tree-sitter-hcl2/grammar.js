@@ -32,13 +32,13 @@ const grammarObject = {
 
   rules: {
     configuration: $ => repeat(choice(
-      $.resource,
       $.data,
-      $.provider,
-      $.variable,
-      $.output,
       $.locals,
       $.module,
+      $.output,
+      $.provider,
+      $.resource,
+      $.variable,
     )),
 
     variable: $ => seq(
@@ -60,14 +60,14 @@ const grammarObject = {
     type: $ => seq("type", "=", $._types),
 
     _types: $ => choice(
-      alias("bool", $.bool_ty),
-      alias("string", $.string_ty),
-      alias("number", $.number_ty),
       $.list_ty,
-      $.set_ty,
       $.map_ty,
       $.object_ty,
+      $.set_ty,
       $.tuple_ty,
+      alias("bool", $.bool_ty),
+      alias("number", $.number_ty),
+      alias("string", $.string_ty),
     ),
 
     list_ty: $ => constructedType("list", $._types),
@@ -115,15 +115,15 @@ const grammarObject = {
     ),
 
     _expression: $ => choice(
-      $.string_literal,
-      $.boolean,
-      $.number,
-      $.interpolation_string,
-      $.map,
-      $.list,
       $._operation,
-      prec(10, $.function),
+      $.boolean,
+      $.interpolation_string,
+      $.list,
+      $.map,
+      $.number,
       $.reference,
+      $.string_literal,
+      prec(10, $.function),
     ),
 
     map: $ => seq("{", maybeCommaSep($.keyValue), "}"),
@@ -133,16 +133,14 @@ const grammarObject = {
     _stringLike: $ => choice($.identifier, $.string_literal),
 
     _operation: $ => choice(
+      prec(10, $.comparison),
       $.ternary,
     ),
 
-    ternary: $ => seq($._booleanExpression, "?", $._expression, ":", $._expression),
+    ternary: $ => seq($.comparison, "?", $._expression, ":", $._expression),
 
-    _booleanExpression: $ => choice(
-      $.comparison,
-    ),
-
-    comparison: $ => prec(10, seq($._expression, $._comparisonOperator , $._expression)),
+    // Not sure I fully understand why I need a numeric `prec` here too
+    comparison: $ => prec.left(10, seq($._expression, $._comparisonOperator , $._expression)),
 
     _comparisonOperator: $ => choice(
       alias("==", $.eq),

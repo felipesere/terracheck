@@ -121,3 +121,24 @@ resource "aws_security_group_rule" "s3" {
   (resource (resource_type) (resource_name)
     (block
       (attribute (identifier) (list (reference))))))
+
+
+===
+resource with boolean that is derived from comparison
+===
+
+
+resource "aws_api_gateway_method" "main" {
+  for_each = var.endpoints
+
+  api_key_required = each.value.method == "POST"
+}
+
+---
+
+(configuration
+  (resource (resource_type) (resource_name)
+    (block
+      (attribute (identifier) (reference))
+      (attribute (identifier) (comparison (reference) (eq) (string_literal))))))
+
