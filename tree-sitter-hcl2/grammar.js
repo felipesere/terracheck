@@ -164,6 +164,8 @@ const grammarObject = {
       "file",
       "md5",
       "replace",
+      "toset",
+      "concat",
     ),
     "(", repeat(seq($.fn_param, optional(','))), ")"),
 

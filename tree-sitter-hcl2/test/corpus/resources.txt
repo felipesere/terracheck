@@ -150,6 +150,11 @@ resource with more complex functions
 resource "aws_api_gateway_deployment" "deployment" {
   stage_description = md5(file("${path.module}/main.tf"))
   format            = replace(file("${path.module}/templates/log_format.json"), "\n", "")
+
+  identifiers = toset(concat(
+        local.default_trusted_principals,
+        local.additional_trusted_principals,
+  ))
 }
 
 ---
@@ -158,13 +163,14 @@ resource "aws_api_gateway_deployment" "deployment" {
   (resource (resource_type) (resource_name)
     (block
       (attribute (identifier) (function (fn_param (function (fn_param (string_literal))))))
-      (attribute 
+      (attribute
         (identifier)
-        (function 
-          (fn_param 
+        (function
+          (fn_param
             (function (fn_param (string_literal))))
           (fn_param (string_literal))
-          (fn_param (string_literal)))))))
+          (fn_param (string_literal))))
+      (attribute (identifier) (function (fn_param (function (fn_param (reference)) (fn_param (reference)))))))))
 
 
 ===
