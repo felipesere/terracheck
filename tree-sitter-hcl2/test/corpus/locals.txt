@@ -56,3 +56,25 @@ locals {
   (locals
     (block
       (attribute (identifier) (ternary (comparison (reference) (lt) (number)) (string_literal) (string_literal) )))))
+
+===
+Ternary from gladis-api
+===
+
+locals {
+  _env_zone   = var.environment == "production" ? "" : "${var.environment}."
+  hosted_zone = "${local._env_zone}gladis.mrdigitalpartners.com"
+
+  vpc = data.terraform_remote_state.environment_infra.outputs.vpc
+}
+
+---
+
+(configuration
+ (locals (block
+  (attribute (identifier) (ternary
+    (comparison (reference) (eq) (string_literal))
+    (string_literal)
+    (string_literal)))
+  (attribute (identifier) (string_literal))
+  (attribute (identifier) (reference)))))

@@ -38,8 +38,14 @@ const grammarObject = {
       $.output,
       $.provider,
       $.resource,
+      $.terraform,
       $.variable,
     )),
+
+    terraform: $ => seq(
+      'terraform',
+      $.block,
+    ),
 
     variable: $ => seq(
       'variable',
@@ -168,6 +174,7 @@ const grammarObject = {
 
     named_map: $ => seq(
       $.identifier,
+      optional($.string_literal),
       alias($.block, $.map),
     ),
 
@@ -179,7 +186,7 @@ const grammarObject = {
     ),
 
     identifier: ($) => {
-      const alpha = /[a-zA-Z]+/;
+      const alpha = /[a-zA-Z_]+/;
       const alphaNumeric = /[a-zA-Z0-9-_]+/;
 
       return token(seq(alpha, repeat(alphaNumeric)));
