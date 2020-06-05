@@ -142,3 +142,42 @@ resource "aws_api_gateway_method" "main" {
       (attribute (identifier) (reference))
       (attribute (identifier) (comparison (reference) (eq) (string_literal))))))
 
+
+===
+resource with more complex functions
+===
+
+resource "aws_api_gateway_deployment" "deployment" {
+  stage_description = md5(file("${path.module}/main.tf"))
+  format            = replace(file("${path.module}/templates/log_format.json"), "\n", "")
+}
+
+---
+
+(configuration
+  (resource (resource_type) (resource_name)
+    (block
+      (attribute (identifier) (function (fn_param (function (fn_param (string_literal))))))
+      (attribute 
+        (identifier)
+        (function 
+          (fn_param 
+            (function (fn_param (string_literal))))
+          (fn_param (string_literal))
+          (fn_param (string_literal)))))))
+
+
+===
+resource with string literal that has escaping
+===
+
+resource "aws_api_gateway_deployment" "deployment" {
+  filter_pattern  = "{$.log_type = \"api_request_response\"}"
+}
+
+---
+
+(configuration
+  (resource (resource_type) (resource_name)
+    (block
+      (attribute (identifier) (string_literal)))))

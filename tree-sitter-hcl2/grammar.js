@@ -161,6 +161,9 @@ const grammarObject = {
     function: $ => seq(choice(
       "merge",
       "length",
+      "file",
+      "md5",
+      "replace",
     ),
     "(", repeat(seq($.fn_param, optional(','))), ")"),
 
@@ -284,7 +287,7 @@ const grammarObject = {
     string_literal: $ => token(
       seq(
         '"',
-        repeat(/[^\\"]/),
+        repeat(/[^"]|(\\\")/),
         '"'
       )),
   },
