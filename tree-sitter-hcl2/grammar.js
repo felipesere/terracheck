@@ -185,10 +185,13 @@ const grammarObject = {
 
     list: $ => seq(
       '[',
+      optional($.for_comprehension),
       commaSep($._expression),
       optional(','),
       ']',
     ),
+
+    for_comprehension: $ => seq("for", $.identifier, "in", $.reference, ":"),
 
     identifier: ($) => {
       const alpha = /[a-zA-Z_]+/;

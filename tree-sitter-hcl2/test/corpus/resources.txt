@@ -187,3 +187,24 @@ resource "aws_api_gateway_deployment" "deployment" {
   (resource (resource_type) (resource_name)
     (block
       (attribute (identifier) (string_literal)))))
+
+
+===
+resource with for loop in list
+===
+
+resource "aws_api_gateway_deployment" "deployment" {
+  additional_trusted_principals = [
+    for account_id in var.additional_trusted_account_ids :
+    "arn:aws:iam::${account_id}:root"
+  ]
+}
+
+---
+
+(configuration
+  (resource (resource_type) (resource_name)
+    (block
+      (attribute
+        (identifier)
+        (list (for_comprehension (identifier) (reference)) (string_literal))))))
