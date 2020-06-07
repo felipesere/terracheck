@@ -6,8 +6,9 @@ const PREC = {
   VAR: 2,
   multiplicative: 6,
   additive: 5,
-  AND: 2,
-  OR: 1,
+  comparative: 4,
+  and: 2,
+  or: 1,
 };
 
 function commaSep1(rule) {
@@ -169,30 +170,35 @@ const grammarObject = {
       seq("+", $._expressionTerm),
     )),
 
-    _binary: $ => prec(2, seq($._expressionTerm, $._binaryOpertor, $._expressionTerm)),
+    _binary: $ => {
+      const multiplicative = ["*", "/"]
+      const additive = ["+", "-"]
+      const comparative = [
+        alias("==", $.eq),
+        alias(">", $.gt),
+        alias(">=", $.gt_eq),
+        alias("<", $.lt),
+        alias("<=", $.lt_eq),
+      ]
 
-    _binaryOpertor: $ => choice(
-      $._comparisonOperator,
-      $._logicOperator,
-      prec(PREC.multiplicative, alias("*",  $.multiplication)),
-      prec(PREC.multiplicative, alias("/",  $.division)),
-      prec(PREC.additive,       alias("+",  $.addition)),
-      prec(PREC.additive,       alias("-",  $.substraction)),
-    ),
+      const table = [
+        [PREC.multiplicative, choice(...multiplicative)],
+        [PREC.additive, choice(...additive)],
+        [PREC.comparative, choice(...comparative)],
+        [PREC.and, "&&"],
+        [PREC.or, "||"],
+        [0, "!"],
+      ]
 
-    _comparisonOperator: $ => choice(
-      alias("==", $.eq),
-      alias(">", $.gt),
-      alias(">=", $.gt_eq),
-      alias("<", $.lt),
-      alias("=<", $.lt_eq),
-    ),
-
-    _logicOperator: $ => choice(
-      prec(PREC.AND,alias("&&", $.and)),
-      prec(PREC.OR, alias("||", $.or)),
-                    alias("!",  $.not),
-    ),
+      return choice(...table.map(([precedence, operator]) =>
+        prec.left(precedence,
+          seq(
+            field('left', $._expressionTerm),
+            field('operator', operator),
+            field('right', $._expressionTerm),
+          )
+      )))
+    },
 
     function: $ => seq(choice(
       "merge",
