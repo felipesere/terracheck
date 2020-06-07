@@ -4,6 +4,10 @@ const PREC = {
   ASSIGN: 0,
   COMMENT: 1,
   VAR: 2,
+  multiplicative: 6,
+  additive: 5,
+  AND: 2,
+  OR: 1,
 };
 
 function commaSep1(rule) {
@@ -125,15 +129,24 @@ const grammarObject = {
     ),
 
     _expression: $ => choice(
+      $._expressionTerm,
       $._operation,
-      $.boolean,
       $.interpolation_string,
+    ),
+
+    _expressionTerm: $ => choice(
+      $._literalValue,
+      $.string_literal,
       $.list,
       $.map,
-      $.number,
       $.reference,
-      $.string_literal,
-      prec(10, $.function),
+      $.function,
+    ),
+
+    _literalValue: $ => choice(
+      $.number,
+      $.boolean,
+      alias("null", $.null),
     ),
 
     map: $ => seq("{", maybeCommaSep($.keyValue), "}"),
@@ -143,19 +156,42 @@ const grammarObject = {
     _stringLike: $ => choice($.identifier, $.string_literal),
 
     _operation: $ => choice(
-      prec(10, $.comparison),
+      $._unary,
+      $._binary,
       $.ternary,
     ),
 
-    ternary: $ => seq($.comparison, "?", $._expression, ":", $._expression),
+    // Need more than just binary here
+    ternary: $ => seq(alias($._binary, $.comparison), "?", $._expression, ":", $._expression),
 
-    // Not sure I fully understand why I need a numeric `prec` here too
-    comparison: $ => prec.left(10, seq($._expression, $._comparisonOperator , $._expression)),
+    _unary: $ => prec(3, choice(
+      seq("-", $._expressionTerm),
+      seq("+", $._expressionTerm),
+    )),
+
+    _binary: $ => prec(2, seq($._expressionTerm, $._binaryOpertor, $._expressionTerm)),
+
+    _binaryOpertor: $ => choice(
+      $._comparisonOperator,
+      $._logicOperator,
+      prec(PREC.multiplicative, alias("*",  $.multiplication)),
+      prec(PREC.multiplicative, alias("/",  $.division)),
+      prec(PREC.additive,       alias("+",  $.addition)),
+      prec(PREC.additive,       alias("-",  $.substraction)),
+    ),
 
     _comparisonOperator: $ => choice(
       alias("==", $.eq),
       alias(">", $.gt),
+      alias(">=", $.gt_eq),
       alias("<", $.lt),
+      alias("=<", $.lt_eq),
+    ),
+
+    _logicOperator: $ => choice(
+      prec(PREC.AND,alias("&&", $.and)),
+      prec(PREC.OR, alias("||", $.or)),
+                    alias("!",  $.not),
     ),
 
     function: $ => seq(choice(
@@ -167,10 +203,7 @@ const grammarObject = {
       "toset",
       "concat",
     ),
-    "(", repeat(seq($.fn_param, optional(','))), ")"),
-
-    fn_param: $ => $._expression,
-
+    "(", repeat(seq(alias($._expression, $.fn_param), optional(','))), ")"),
 
     _initializer: $ => seq(
       '=',

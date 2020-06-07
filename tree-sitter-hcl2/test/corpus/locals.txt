@@ -78,3 +78,31 @@ locals {
     (string_literal)))
   (attribute (identifier) (string_literal))
   (attribute (identifier) (reference)))))
+
+===
+Multiplication and minus
+===
+
+
+locals {
+  human_friendly_percent_remaining = var.percent_full * 100
+
+  bytes_in_a_gb = 1073741824
+
+  percent_remaining = 1.0 - var.percent_full
+
+  bytes_remaining = local.percent_remaining * var.db_size_in_gb * local.bytes_in_a_gb
+}
+
+---
+(configuration
+  (locals
+    (block
+      (attribute (identifier) (reference) (multiplication) (number))
+      (attribute (identifier) (number))
+      (attribute (identifier) (number) (substraction) (reference))
+      (attribute (identifier) (reference) (multiplication)
+                              (reference) (multiplication)
+                              (reference))
+      )))
+

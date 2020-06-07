@@ -140,7 +140,7 @@ resource "aws_api_gateway_method" "main" {
   (resource (resource_type) (resource_name)
     (block
       (attribute (identifier) (reference))
-      (attribute (identifier) (comparison (reference) (eq) (string_literal))))))
+      (attribute (identifier) (reference) (eq) (string_literal)))))
 
 
 ===
