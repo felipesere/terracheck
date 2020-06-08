@@ -90,8 +90,6 @@ locals {
   bytes_in_a_gb = 1073741824
 
   percent_remaining = 1.0 - var.percent_full
-
-  bytes_remaining = local.percent_remaining * var.db_size_in_gb * local.bytes_in_a_gb
 }
 
 ---
@@ -100,9 +98,22 @@ locals {
     (block
       (attribute (identifier) (reference) (multiplication) (number))
       (attribute (identifier) (number))
-      (attribute (identifier) (number) (substraction) (reference))
-      (attribute (identifier) (reference) (multiplication)
-                              (reference) (multiplication)
-                              (reference))
-      )))
+      (attribute (identifier) (number) (substraction) (reference)))))
 
+
+===
+Complex multiplication
+===
+
+locals {
+  bytes_remaining = A * B * C
+}
+
+---
+
+(configuration
+  (locals
+    (block
+      (attribute (identifier) (reference) (multiplication)
+                              (reference) (multiplication) (reference))
+      )))

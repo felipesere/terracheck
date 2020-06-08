@@ -162,8 +162,7 @@ const grammarObject = {
       $.ternary,
     ),
 
-    // Need more than just binary here
-    ternary: $ => seq(alias($._binary, $.comparison), "?", $._expression, ":", $._expression),
+    ternary: $ => prec.left(seq(alias($._expression, $.comparison), "?", $._expression, ":", $._expression)),
 
     _unary: $ => prec(3, choice(
       seq("-", $._expressionTerm),
@@ -171,8 +170,16 @@ const grammarObject = {
     )),
 
     _binary: $ => {
-      const multiplicative = ["*", "/"]
-      const additive = ["+", "-"]
+      const multiplicative = [
+        alias("*", $.multiplication),
+        alias("/", $.division)
+      ]
+
+      const additive = [
+        alias("+", $.addition),
+        alias("-", $.substraction)
+      ]
+
       const comparative = [
         alias("==", $.eq),
         alias(">", $.gt),
@@ -191,12 +198,7 @@ const grammarObject = {
       ]
 
       return choice(...table.map(([precedence, operator]) =>
-        prec.left(precedence,
-          seq(
-            field('left', $._expressionTerm),
-            field('operator', operator),
-            field('right', $._expressionTerm),
-          )
+        prec.left(precedence, seq( $._expression, operator, $._expression)
       )))
     },
 
