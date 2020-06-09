@@ -4,6 +4,8 @@ use glob::glob;
 use std::fs::read_to_string;
 use tree_sitter::{Language, Node, Parser, Query, QueryCursor};
 
+mod document;
+
 fn main() {
     extern "C" {
         fn tree_sitter_terraform() -> Language;
