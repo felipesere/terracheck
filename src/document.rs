@@ -10,9 +10,16 @@ struct Document {
     rules: Vec<Rule>,
 }
 
+#[derive(Eq, PartialEq, Debug)]
+enum Decision {
+    Allow,
+    Deny,
+}
+
 struct Rule {
     title: String,
     code: String,
+    decision: Decision,
 }
 
 impl Rule {
@@ -20,6 +27,7 @@ impl Rule {
         Rule {
             title: "".into(),
             code: "".into(),
+            decision: Decision::Deny,
         }
     }
 }
@@ -47,8 +55,11 @@ fn from_reader<R: Read>(mut input: R) -> Option<Document> {
                 doc.title = consume_text(&mut parser).expect("there should have been a doc title");
             }
             Start(Heading(2)) => {
-                current_rule.title =
-                    consume_text(&mut parser).expect("there should have been title text");
+                let title = consume_text(&mut parser).expect("there should have been title text");
+                if title.starts_with("Allow") {
+                    current_rule.decision = Decision::Allow;
+                }
+                current_rule.title = title
             }
             Start(CodeBlock(_)) => {
                 current_rule.code = consume_text(&mut parser).expect("there was no code");
@@ -102,6 +113,7 @@ resource "aws_db_instance" * {
         let doc = from_reader(text.as_bytes()).expect("there should have been a doc");
 
         assert_eq!(doc.title, "Only allow MySQL rds instances");
-        assert_eq!(doc.rules.len(), 2)
+        assert_eq!(doc.rules[0].decision, Decision::Allow);
+        assert_eq!(doc.rules[1].decision, Decision::Deny);
     }
 }
