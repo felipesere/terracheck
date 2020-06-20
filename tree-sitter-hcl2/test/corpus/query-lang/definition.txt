@@ -1,0 +1,42 @@
+===
+Any name for resource
+===
+
+resource "something" $(*) {
+  foo = "bar"
+}
+
+---
+
+(configuration
+  (resource (resource_type) (query) (block
+    (attribute (identifier) (string_literal)))))
+
+===
+Any value for an attribute
+===
+
+resource "something" $(*) {
+  foo = $(*)
+}
+
+---
+
+(configuration
+  (resource (resource_type) (query) (block
+    (attribute (identifier) (query)))))
+
+
+===
+Any set of characters query delimiter
+===
+
+resource "something" $(*) {
+  foo = $("a" | "b")
+}
+
+---
+
+(configuration
+  (resource (resource_type) (query) (block
+    (attribute (identifier) (query)))))

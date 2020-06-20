@@ -108,9 +108,14 @@ const grammarObject = {
     resource: $ => seq(
       'resource',
       alias($.string_literal, $.resource_type),
-      alias($.string_literal, $.resource_name),
+      choice(
+        alias($.string_literal, $.resource_name),
+        $.query,
+      ),
       $.block,
     ),
+
+    query: $ => seq("$(", /[^)]+/, ")"),
 
     data: $ => seq(
       'data',
@@ -215,7 +220,10 @@ const grammarObject = {
 
     _initializer: $ => seq(
       '=',
-      $._expression,
+      choice(
+        $.query,
+        $._expression,
+      ),
     ),
 
     named_map: $ => seq(
