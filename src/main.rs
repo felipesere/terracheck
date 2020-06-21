@@ -2,15 +2,12 @@ use clap::{App, Arg};
 use colored::*;
 use glob::glob;
 use std::fs::read_to_string;
-use tree_sitter::{Language, Node, Parser, Query, QueryCursor};
+use tree_sitter::{Node, Parser, Query, QueryCursor};
 
 mod document;
+mod terraform;
 
 fn main() {
-    extern "C" {
-        fn tree_sitter_terraform() -> Language;
-    }
-
     let matches = App::new("My Super Program")
         .version("0.1")
         .about("Checks terraform files for patterns")
@@ -36,16 +33,14 @@ fn main() {
         )
         .get_matches();
 
-    let mut parser = Parser::new();
-    let language = unsafe { tree_sitter_terraform() };
-    parser.set_language(language).expect("was not able to create the language");
+    let parser = terraform::parser();
 
     match matches.subcommand() {
         ("query", Some(query_matches)) => {
             let file = query_matches.value_of("query_file").unwrap();
             let content = read_to_string(file).unwrap();
 
-            let query = Query::new(language, &content).expect("unworkable query");
+            let query = Query::new(parser.language().unwrap(), &content).expect("unworkable query");
 
             run_query(parser, query)
         }

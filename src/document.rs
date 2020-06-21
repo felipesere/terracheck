@@ -3,7 +3,10 @@ use pulldown_cmark::{
     Parser,
     Tag::{CodeBlock, Heading},
 };
+
+use super::terraform;
 use std::io::Read;
+use tree_sitter::Node;
 
 struct Document {
     title: String,
@@ -17,9 +20,9 @@ enum Decision {
 }
 
 struct Rule {
-    title: String,
-    code: String,
-    decision: Decision,
+    pub title: String,
+    pub code: String,
+    pub decision: Decision,
 }
 
 impl Rule {
@@ -29,6 +32,34 @@ impl Rule {
             code: "".into(),
             decision: Decision::Deny,
         }
+    }
+
+    fn to_sexp(&self) -> String {
+        let mut parser = terraform::parser();
+
+        let tree = parser.parse(&self.code, None).unwrap();
+
+        print(tree.root_node(), self.code.as_str());
+
+        "()".into()
+    }
+}
+
+fn print(node: Node, source: &str) {
+    if !node.is_named() {
+        return;
+    }
+
+    if node.child_count() > 0 {
+        for child in node.children(&mut node.walk()) {
+            print(child, source)
+        }
+    } else {
+        println!(
+            "{} {}",
+            node.kind(),
+            node.utf8_text(source.as_bytes()).unwrap()
+        );
     }
 }
 
@@ -96,7 +127,7 @@ The above is just a title
 ## Allow
 
 ```
-resource "aws_db_instance" * {
+resource "aws_db_instance" $(*) {
   engine = "mysql"
 }
 ```
@@ -104,7 +135,7 @@ resource "aws_db_instance" * {
 ## Deny
 
 ```
-resource "aws_db_instance" * {
+resource "aws_db_instance" $(*) {
 }
 ```
 
@@ -115,5 +146,29 @@ resource "aws_db_instance" * {
         assert_eq!(doc.title, "Only allow MySQL rds instances");
         assert_eq!(doc.rules[0].decision, Decision::Allow);
         assert_eq!(doc.rules[1].decision, Decision::Deny);
+    }
+
+    #[ignore]
+    #[test]
+    fn turns_a_rule_into_s_expression() {
+        let r = Rule {
+            title: "Example".into(),
+            code: r#"
+                    resource "aws_db_instance" $(*) {
+                        foo = [1, 2, 3]
+                        bar = "batz"
+                    }
+                    "#
+            .into(),
+            decision: Decision::Allow,
+        };
+
+        assert_eq!(
+            r#"(resource 
+            (resource_type) @type
+            (#eq? @type "\"aws_db_instance\"")
+        )"#,
+            r.to_sexp()
+        )
     }
 }
