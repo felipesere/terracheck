@@ -3,6 +3,10 @@ resource "aws_rds_instance" "my-db" {
   num = 12
 }
 
+resource "aws_rds_instance" "my-db" {
+  num = 12
+}
+
 resource "aws_ami" "pc" {
   ami = "something_really_cool"
 }

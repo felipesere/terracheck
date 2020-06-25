@@ -115,7 +115,7 @@ const grammarObject = {
       $.block,
     ),
 
-    query: $ => seq("$(", /[^)]+/, ")"),
+    query: $ => token(seq("$(", /[^)]+/, ")")),
 
     data: $ => seq(
       'data',

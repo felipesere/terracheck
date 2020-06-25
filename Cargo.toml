@@ -5,6 +5,9 @@ name = "terracheck"
 version = "0.1.0"
 [build-dependencies]
 cc = "*"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
 
 [dependencies]
 glob = "*"
@@ -12,3 +15,8 @@ tree-sitter = "*"
 clap = "3.0.0-beta.1"
 colored = "1.9.3"
 pulldown-cmark = "0.7.1"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+[dev-dependencies]
+pretty_assertions = "0.6.1"

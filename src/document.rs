@@ -19,6 +19,31 @@ enum Decision {
     Deny,
 }
 
+#[derive(Debug)]
+enum AST {
+    Container {
+        kind: String,
+        children: Vec<Box<AST>>,
+    },
+    Fixed {
+        kind: String,
+        value: String,
+    },
+    WithQuery {
+        reference: String,
+    },
+}
+
+struct Query {
+    reference: String,
+    operation: String,
+}
+
+struct Pattern {
+    nodes: Vec<AST>,
+    query: Vec<Query>,
+}
+
 struct Rule {
     pub title: String,
     pub code: String,
@@ -34,32 +59,53 @@ impl Rule {
         }
     }
 
+    fn to_pattern(&self) -> Pattern {
+        let mut parser = terraform::parser();
+
+        let tree = parser.parse(&self.code, None).unwrap();
+        let mut nodes = Vec::new();
+        let mut queries = Vec::new();
+
+        println!("AST: {:?}", ast(tree.root_node(), &self.code));
+
+        Pattern {
+            nodes,
+            query: queries,
+        }
+    }
+
     fn to_sexp(&self) -> String {
         let mut parser = terraform::parser();
 
         let tree = parser.parse(&self.code, None).unwrap();
 
-        print(tree.root_node(), self.code.as_str());
+        let nodes = ast(tree.root_node(), self.code.as_str()).unwrap();
 
-        "()".into()
+        "() @result".into()
     }
 }
 
-fn print(node: Node, source: &str) {
+fn ast(node: Node, source: &str) -> Option<AST> {
     if !node.is_named() {
-        return;
+        return None;
     }
 
-    if node.child_count() > 0 {
+    let kind: String = node.kind().into();
+
+    if terraform::is_container(&kind) {
+        let mut children: Vec<Box<AST>> = Vec::new();
         for child in node.children(&mut node.walk()) {
-            print(child, source)
+            match ast(child, &source) {
+                None => continue,
+                Some(x) => children.push(Box::new(x)),
+            }
         }
+        Some(AST::Container { kind, children })
     } else {
-        println!(
-            "{} {}",
-            node.kind(),
-            node.utf8_text(source.as_bytes()).unwrap()
-        );
+        Some(AST::Fixed {
+            kind,
+            value: node.utf8_text(source.as_bytes()).unwrap().into(),
+        })
     }
 }
 
@@ -116,6 +162,7 @@ fn consume_text(p: &mut Parser) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use pretty_assertions::assert_eq;
 
     #[test]
     fn parses_a_doc_with_two_rules() {
@@ -148,26 +195,22 @@ resource "aws_db_instance" $(*) {
         assert_eq!(doc.rules[1].decision, Decision::Deny);
     }
 
-    #[ignore]
     #[test]
     fn turns_a_rule_into_s_expression() {
         let r = Rule {
             title: "Example".into(),
             code: r#"
                     resource "aws_db_instance" $(*) {
-                        foo = [1, 2, 3]
-                        bar = "batz"
                     }
                     "#
             .into(),
             decision: Decision::Allow,
         };
 
+        r.to_pattern();
+
         assert_eq!(
-            r#"(resource 
-            (resource_type) @type
-            (#eq? @type "\"aws_db_instance\"")
-        )"#,
+            r#"((resource (resource_type) @type) (#eq? @type "\"aws_db_instance\"")) @result"#,
             r.to_sexp()
         )
     }

@@ -14,3 +14,15 @@ pub fn parser() -> Parser {
     parser
 }
 
+include!(concat!(env!("OUT_DIR"), "/is_container.rs"));
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn it_can_read_json() {
+        assert!(is_container("resource"));
+        assert!(!is_container("resource_type"));
+    }
+}
