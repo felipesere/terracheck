@@ -34,6 +34,42 @@ enum AST {
     },
 }
 
+impl AST {
+    pub fn sexp(&self) -> String {
+        match self {
+            AST::Container { kind, children } => format!(
+                "({} {})",
+                kind,
+                children
+                    .iter()
+                    .map(|child| child.sexp())
+                    .collect::<Vec<String>>()
+                    .join(" ")
+            ),
+            AST::Fixed {
+                kind,
+                value: _value,
+            } => format!("({kind})", kind = kind),
+            AST::WithQuery { reference } => format!("(*) @{reference}", reference = reference),
+        }
+    }
+}
+
+fn sexp(queries: Vec<Query>) -> String {
+    queries
+        .iter()
+        .map(|query| {
+            format!(
+                "(#match? @{reference} {value})",
+                reference = query.reference,
+                value = "*"
+            )
+        })
+        .collect::<Vec<String>>()
+        .join(" ")
+}
+
+#[derive(Debug)]
 struct Query {
     reference: String,
     operation: String,
@@ -59,53 +95,66 @@ impl Rule {
         }
     }
 
-    fn to_pattern(&self) -> Pattern {
-        let mut parser = terraform::parser();
-
-        let tree = parser.parse(&self.code, None).unwrap();
-        let mut nodes = Vec::new();
-        let mut queries = Vec::new();
-
-        println!("AST: {:?}", ast(tree.root_node(), &self.code));
-
-        Pattern {
-            nodes,
-            query: queries,
-        }
-    }
-
     fn to_sexp(&self) -> String {
         let mut parser = terraform::parser();
 
         let tree = parser.parse(&self.code, None).unwrap();
 
-        let nodes = ast(tree.root_node(), self.code.as_str()).unwrap();
+        let ast = ast(tree.root_node(), self.code.as_str());
 
-        "() @result".into()
+        if let (Some(nodes), queries) = ast {
+            format!(
+                "({nodes} {query}) @result",
+                nodes = nodes.sexp(),
+                query = sexp(queries)
+            )
+        } else {
+            "".into()
+        }
     }
 }
 
-fn ast(node: Node, source: &str) -> Option<AST> {
+fn ast(node: Node, source: &str) -> (Option<AST>, Vec<Query>) {
+    let mut queries = Vec::new();
     if !node.is_named() {
-        return None;
+        return (None, queries);
     }
 
     let kind: String = node.kind().into();
+
+    if kind == "query" {
+        let reference: String = "a".into();
+        return (
+            Some(AST::WithQuery {
+                reference: reference.clone(),
+            }),
+            vec![Query {
+                reference,
+                operation: node.utf8_text(source.as_bytes()).unwrap().into(),
+            }],
+        );
+    }
 
     if terraform::is_container(&kind) {
         let mut children: Vec<Box<AST>> = Vec::new();
         for child in node.children(&mut node.walk()) {
             match ast(child, &source) {
-                None => continue,
-                Some(x) => children.push(Box::new(x)),
+                (None, _) => continue,
+                (Some(x), mut new_queries) => {
+                    children.push(Box::new(x));
+                    queries.append(&mut new_queries);
+                }
             }
         }
-        Some(AST::Container { kind, children })
+        (Some(AST::Container { kind, children }), queries)
     } else {
-        Some(AST::Fixed {
-            kind,
-            value: node.utf8_text(source.as_bytes()).unwrap().into(),
-        })
+        (
+            Some(AST::Fixed {
+                kind,
+                value: node.utf8_text(source.as_bytes()).unwrap().into(),
+            }),
+            queries,
+        )
     }
 }
 
@@ -201,13 +250,12 @@ resource "aws_db_instance" $(*) {
             title: "Example".into(),
             code: r#"
                     resource "aws_db_instance" $(*) {
+                        engine = $(*)
                     }
                     "#
             .into(),
             decision: Decision::Allow,
         };
-
-        r.to_pattern();
 
         assert_eq!(
             r#"((resource (resource_type) @type) (#eq? @type "\"aws_db_instance\"")) @result"#,
