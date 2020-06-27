@@ -116,14 +116,29 @@ impl Rule {
     }
 }
 
-fn ast(node: Node, source: &str) -> (Option<AST>, Vec<Query>) {
+struct Reference {
+    chars: Box<dyn Iterator<Item = char>>,
+}
+
+impl Reference {
+    fn new() -> Self {
+        Reference {
+            chars: Box::new("abcdefghijklmnopqrstuvwxyz".chars()),
+        }
+    }
+
+    fn next(&mut self) -> String {
+        self.chars.next().unwrap().to_string()
+    }
+}
+
+fn ast_innner(node: Node, source: &str, generator: &mut Reference) -> (Option<AST>, Vec<Query>) {
     let mut queries = Vec::new();
     if !node.is_named() {
         return (None, queries);
     }
 
     let kind: String = node.kind().into();
-    let reference: String = "a".into(); // will need to generate referneces dynamically
     let value: String = node.utf8_text(source.as_bytes()).unwrap().into();
 
     if kind == "query" {
@@ -131,6 +146,7 @@ fn ast(node: Node, source: &str) -> (Option<AST>, Vec<Query>) {
             return (Some(AST::Any), queries);
         }
 
+        let reference = generator.next();
         return (
             Some(AST::WithQuery {
                 reference: reference.clone(),
@@ -146,7 +162,7 @@ fn ast(node: Node, source: &str) -> (Option<AST>, Vec<Query>) {
     if terraform::is_container(&kind) {
         let mut children: Vec<Box<AST>> = Vec::new();
         for child in node.children(&mut node.walk()) {
-            match ast(child, &source) {
+            match ast_innner(child, &source, generator) {
                 (None, _) => continue,
                 (Some(x), mut new_queries) => {
                     children.push(Box::new(x));
@@ -156,6 +172,7 @@ fn ast(node: Node, source: &str) -> (Option<AST>, Vec<Query>) {
         }
         (Some(AST::Container { kind, children }), queries)
     } else {
+        let reference = generator.next();
         queries.push(Query {
             reference: reference.clone(),
             operation: "eq".into(), // enum here?
@@ -169,6 +186,11 @@ fn ast(node: Node, source: &str) -> (Option<AST>, Vec<Query>) {
             queries,
         )
     }
+}
+
+fn ast(node: Node, source: &str) -> (Option<AST>, Vec<Query>) {
+    let mut generator = Reference::new();
+    ast_innner(node, source, &mut generator)
 }
 
 fn from_reader<R: Read>(mut input: R) -> Option<Document> {
