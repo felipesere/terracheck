@@ -82,11 +82,6 @@ struct Query {
     value: Option<String>,
 }
 
-struct Pattern {
-    nodes: Vec<AST>,
-    query: Vec<Query>,
-}
-
 struct Rule {
     pub title: String,
     pub code: String,
