@@ -27,16 +27,18 @@ enum AST {
     },
     Fixed {
         kind: String,
-        value: String,
+        reference: String,
     },
     WithQuery {
         reference: String,
     },
+    Any,
 }
 
 impl AST {
     pub fn sexp(&self) -> String {
         match self {
+            AST::Any => "(*)".into(),
             AST::Container { kind, children } => format!(
                 "({} {})",
                 kind,
@@ -46,10 +48,9 @@ impl AST {
                     .collect::<Vec<String>>()
                     .join(" ")
             ),
-            AST::Fixed {
-                kind,
-                value: _value,
-            } => format!("({kind})", kind = kind),
+            AST::Fixed { kind, reference: r } => {
+                format!("({kind}) @{reference}", kind = kind, reference = r)
+            }
             AST::WithQuery { reference } => format!("(*) @{reference}", reference = reference),
         }
     }
@@ -60,9 +61,14 @@ fn sexp(queries: Vec<Query>) -> String {
         .iter()
         .map(|query| {
             format!(
-                "(#match? @{reference} {value})",
+                "(#{op}? @{reference} {value})",
+                op = query.operation,
                 reference = query.reference,
-                value = "*"
+                value = query
+                    .value
+                    .clone()
+                    .map(|q| format!(r#"{:?}"#, q))
+                    .unwrap_or(String::from("*")),
             )
         })
         .collect::<Vec<String>>()
@@ -73,6 +79,7 @@ fn sexp(queries: Vec<Query>) -> String {
 struct Query {
     reference: String,
     operation: String,
+    value: Option<String>,
 }
 
 struct Pattern {
@@ -121,16 +128,22 @@ fn ast(node: Node, source: &str) -> (Option<AST>, Vec<Query>) {
     }
 
     let kind: String = node.kind().into();
+    let reference: String = "a".into(); // will need to generate referneces dynamically
+    let value: String = node.utf8_text(source.as_bytes()).unwrap().into();
 
     if kind == "query" {
-        let reference: String = "a".into();
+        if value == "$(*)" {
+            return (Some(AST::Any), queries);
+        }
+
         return (
             Some(AST::WithQuery {
                 reference: reference.clone(),
             }),
             vec![Query {
                 reference,
-                operation: node.utf8_text(source.as_bytes()).unwrap().into(),
+                operation: "any".into(), //  Will need to do more parsing here to identify what operator to use
+                value: None,
             }],
         );
     }
@@ -148,10 +161,15 @@ fn ast(node: Node, source: &str) -> (Option<AST>, Vec<Query>) {
         }
         (Some(AST::Container { kind, children }), queries)
     } else {
+        queries.push(Query {
+            reference: reference.clone(),
+            operation: "eq".into(), // enum here?
+            value: Some(value),
+        });
         (
             Some(AST::Fixed {
                 kind,
-                value: node.utf8_text(source.as_bytes()).unwrap().into(),
+                reference: reference,
             }),
             queries,
         )
@@ -258,7 +276,7 @@ resource "aws_db_instance" $(*) {
         };
 
         assert_eq!(
-            r#"((resource (resource_type) @type) (#eq? @type "\"aws_db_instance\"")) @result"#,
+            r#"((configuration (resource (resource_type) @type) (#eq? @type "\"aws_db_instance\""))) @result"#,
             r.to_sexp()
         )
     }
