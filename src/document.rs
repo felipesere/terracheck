@@ -39,15 +39,19 @@ impl AST {
     pub fn sexp(&self) -> String {
         match self {
             AST::Any => "(*)".into(),
-            AST::Container { kind, children } => format!(
-                "({} {})",
-                kind,
-                children
+            AST::Container { kind, children } => {
+                let inner = children
                     .iter()
                     .map(|child| child.sexp())
                     .collect::<Vec<String>>()
-                    .join(" ")
-            ),
+                    .join(" ");
+
+                if kind == "resource" {
+                    format!("({} {}) @result", kind, inner)
+                } else {
+                    format!("({} {})", kind, inner)
+                }
+            }
             AST::Fixed { kind, reference: r } => {
                 format!("({kind}) @{reference}", kind = kind, reference = r)
             }
@@ -106,7 +110,7 @@ impl Rule {
 
         if let (Some(nodes), queries) = ast {
             format!(
-                "({nodes} {query}) @result",
+                "({nodes} {query})",
                 nodes = nodes.sexp(),
                 query = sexp(queries)
             )
@@ -284,8 +288,8 @@ resource "aws_db_instance" $(*) {
         let r = Rule {
             title: "Example".into(),
             code: r#"
-                    resource "aws_db_instance" $(*) {
-                        engine = $(*)
+                    resource "aws_rds_instance" $(*) {
+                        size = $(*)
                     }
                     "#
             .into(),
@@ -293,7 +297,7 @@ resource "aws_db_instance" $(*) {
         };
 
         assert_eq!(
-            r#"((configuration (resource (resource_type) @type) (#eq? @type "\"aws_db_instance\""))) @result"#,
+            r#"((configuration (resource (resource_type) @a (*) (block (attribute (identifier) @b (*)))) @result) (#eq? @a "\"aws_rds_instance\"") (#eq? @b "size"))"#,
             r.to_sexp()
         )
     }
