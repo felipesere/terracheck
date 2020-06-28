@@ -6,7 +6,10 @@ use pulldown_cmark::{
 use tree_sitter::{Node, QueryCursor};
 
 use super::terraform;
+use ast::AST;
 use std::io::Read;
+
+mod ast;
 
 #[derive(Debug)]
 pub struct Document {
@@ -42,47 +45,6 @@ impl Document {
 pub enum Decision {
     Allow,
     Deny,
-}
-
-#[derive(Debug)]
-enum AST {
-    Container {
-        kind: String,
-        children: Vec<Box<AST>>,
-    },
-    Fixed {
-        kind: String,
-        reference: String,
-    },
-    WithQuery {
-        reference: String,
-    },
-    Any,
-}
-
-impl AST {
-    pub fn sexp(&self) -> String {
-        match self {
-            AST::Any => "(*)".into(),
-            AST::Container { kind, children } => {
-                let inner = children
-                    .iter()
-                    .map(|child| child.sexp())
-                    .collect::<Vec<String>>()
-                    .join(" ");
-
-                if kind == "resource" {
-                    format!("({} {}) @result", kind, inner)
-                } else {
-                    format!("({} {})", kind, inner)
-                }
-            }
-            AST::Fixed { kind, reference: r } => {
-                format!("({kind}) @{reference}", kind = kind, reference = r)
-            }
-            AST::WithQuery { reference } => format!("(*) @{}", reference),
-        }
-    }
 }
 
 fn sexp(queries: Vec<Query>) -> String {
