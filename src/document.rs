@@ -55,7 +55,7 @@ impl AST {
             AST::Fixed { kind, reference: r } => {
                 format!("({kind}) @{reference}", kind = kind, reference = r)
             }
-            AST::WithQuery { reference } => format!("(*) @{reference}", reference = reference),
+            AST::WithQuery { reference } => format!("(*) @{}", reference),
         }
     }
 }
@@ -168,8 +168,8 @@ fn ast_innner(node: Node, source: &str, generator: &mut Reference) -> (Option<AS
         for child in node.children(&mut node.walk()) {
             match ast_innner(child, &source, generator) {
                 (None, _) => continue,
-                (Some(x), mut new_queries) => {
-                    children.push(Box::new(x));
+                (Some(ast), mut new_queries) => {
+                    children.push(Box::new(ast));
                     queries.append(&mut new_queries);
                 }
             }
