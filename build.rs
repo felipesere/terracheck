@@ -20,11 +20,11 @@ fn main() {
         .file(dir.join("parser.c"))
         .compile("tree-sitter-hcl2");
 
-    let nodeTypesJson: PathBuf = ["tree-sitter-hcl2", "src", "node-types.json"]
+    let node_types_json: PathBuf = ["tree-sitter-hcl2", "src", "node-types.json"]
         .iter()
         .collect();
 
-    let f = std::fs::File::open(&nodeTypesJson).unwrap();
+    let f = std::fs::File::open(&node_types_json).unwrap();
 
     // println!("cargo:rerun-if-changed={}", nodeTypesJson.display());
     let types: Vec<Node> = serde_json::from_reader(&f).unwrap();

@@ -33,6 +33,15 @@ fn main() {
                 )
                 .about("Prints everythinng that was parsed"),
         )
+        .subcommand(
+            App::new("check").arg(
+                Arg::new("rule_file")
+                    .about("Verifies if any resource matches the rule in the markdown file")
+                    .value_name("RULE_FILE")
+                    .takes_value(true)
+                    .required(true),
+            ),
+        )
         .get_matches();
 
     let parser = terraform::parser();
@@ -48,7 +57,42 @@ fn main() {
         }
 
         ("show", Some(show_matches)) => parse_all(parser, show_matches.is_present("error_only")),
+        ("check", Some(check_matches)) => {
+            run_check(parser, check_matches.value_of("rule_file").unwrap())
+        }
         _ => println!("Unknown command"),
+    }
+}
+
+fn run_check(mut parser: Parser, rule_file: &str) {
+    use std::fs::File;
+
+    let file = File::open(rule_file).expect("could not open rule file");
+
+    let doc = document::from_reader(&file).expect("was not able to parse markdown");
+    let rule = doc.rules.get(0).unwrap();
+
+    let query = Query::new(parser.language().unwrap(), &rule.to_sexp()).expect("unworkable query");
+    let mut cursor = QueryCursor::new();
+
+    for entry in glob("**/*.tf").expect("Failed to read glob pattern") {
+        match entry {
+            Ok(path) => {
+                let terraform_content = read_to_string(&path).unwrap();
+                let terraform_ast = parser.parse(&terraform_content, None).unwrap();
+                let text_callback = |n: Node| &terraform_content[n.byte_range()];
+                let mut matches = cursor
+                    .matches(&query, terraform_ast.root_node(), text_callback)
+                    .peekable();
+
+                if matches.peek().is_none() {
+                    continue;
+                }
+
+                println!("\n{}", path.to_str().unwrap());
+            }
+            err => println!("error: {:?}", err),
+        }
     }
 }
 

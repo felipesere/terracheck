@@ -8,13 +8,14 @@ use super::terraform;
 use std::io::Read;
 use tree_sitter::Node;
 
-struct Document {
+#[derive(Debug)]
+pub struct Document {
     title: String,
-    rules: Vec<Rule>,
+    pub rules: Vec<Rule>,
 }
 
 #[derive(Eq, PartialEq, Debug)]
-enum Decision {
+pub enum Decision {
     Allow,
     Deny,
 }
@@ -86,7 +87,8 @@ struct Query {
     value: Option<String>,
 }
 
-struct Rule {
+#[derive(Debug)]
+pub struct Rule {
     pub title: String,
     pub code: String,
     pub decision: Decision,
@@ -101,7 +103,7 @@ impl Rule {
         }
     }
 
-    fn to_sexp(&self) -> String {
+    pub fn to_sexp(&self) -> String {
         let mut parser = terraform::parser();
 
         let tree = parser.parse(&self.code, None).unwrap();
@@ -197,7 +199,7 @@ fn ast(node: Node, source: &str) -> (Option<AST>, Vec<Query>) {
     ast_innner(node, source, &mut generator)
 }
 
-fn from_reader<R: Read>(mut input: R) -> Option<Document> {
+pub fn from_reader<R: Read>(mut input: R) -> Option<Document> {
     let mut buffer = Vec::new();
     input
         .read_to_end(&mut buffer)
