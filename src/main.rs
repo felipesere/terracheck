@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use clap::{App, Arg};
 use colored::*;
 use glob::glob;
