@@ -94,7 +94,7 @@ impl Rule {
 
         let tree = parser.parse(&self.code, None).unwrap();
 
-        let ast = ast(tree.root_node(), self.code.as_str());
+        let ast = ast(tree.root_node(), self.code.as_str(), &mut Reference::new());
 
         if let (Some(nodes), queries) = ast {
             format!(
@@ -124,7 +124,7 @@ impl Reference {
     }
 }
 
-fn ast_innner(node: Node, source: &str, generator: &mut Reference) -> (Option<AST>, Vec<Query>) {
+fn ast(node: Node, source: &str, generator: &mut Reference) -> (Option<AST>, Vec<Query>) {
     let mut queries = Vec::new();
     if !node.is_named() {
         return (None, queries);
@@ -154,7 +154,7 @@ fn ast_innner(node: Node, source: &str, generator: &mut Reference) -> (Option<AS
     if terraform::is_container(&kind) {
         let mut children: Vec<Box<AST>> = Vec::new();
         for child in node.children(&mut node.walk()) {
-            match ast_innner(child, &source, generator) {
+            match ast(child, &source, generator) {
                 (None, _) => continue,
                 (Some(ast), mut new_queries) => {
                     children.push(Box::new(ast));
@@ -178,11 +178,6 @@ fn ast_innner(node: Node, source: &str, generator: &mut Reference) -> (Option<AS
             queries,
         )
     }
-}
-
-fn ast(node: Node, source: &str) -> (Option<AST>, Vec<Query>) {
-    let mut generator = Reference::new();
-    ast_innner(node, source, &mut generator)
 }
 
 pub fn from_reader<R: Read>(mut input: R) -> Option<Document> {
