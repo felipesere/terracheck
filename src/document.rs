@@ -3,15 +3,39 @@ use pulldown_cmark::{
     Parser,
     Tag::{CodeBlock, Heading},
 };
+use tree_sitter::{Node, QueryCursor};
 
 use super::terraform;
 use std::io::Read;
-use tree_sitter::Node;
 
 #[derive(Debug)]
 pub struct Document {
     title: String,
     pub rules: Vec<Rule>,
+}
+
+impl Document {
+    pub fn matches<R: Read>(&self, mut terraform: R) -> bool {
+        let mut cursor = QueryCursor::new();
+        let mut parser = crate::terraform::parser();
+        let mut content = String::new();
+        terraform
+            .read_to_string(&mut content)
+            .expect("unable to read terraform code");
+        let terraform_ast = parser.parse(&content, None).unwrap();
+        let text_callback = |n: Node| &content[n.byte_range()];
+
+        for rule in &self.rules {
+            let query = terraform::query(&rule.to_sexp());
+            let mut matches = cursor
+                .matches(&query, terraform_ast.root_node(), text_callback)
+                .peekable();
+            if matches.peek().is_some() {
+                return true;
+            }
+        }
+        false
+    }
 }
 
 #[derive(Eq, PartialEq, Debug)]

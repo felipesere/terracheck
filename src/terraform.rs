@@ -1,7 +1,11 @@
-use tree_sitter::{Language, Parser};
+use tree_sitter::{Language, Parser, Query};
 
 extern "C" {
     fn tree_sitter_terraform() -> Language;
+}
+
+pub fn query(source: &str) -> Query {
+    Query::new(parser().language().unwrap(), source).expect("unworkable query")
 }
 
 pub fn parser() -> Parser {
