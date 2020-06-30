@@ -9,6 +9,9 @@ use tree_sitter::Parser;
 mod document;
 mod terraform;
 
+#[macro_use]
+extern crate lazy_static;
+
 fn main() {
     let matches = App::new("My Super Program")
         .version("0.1")
@@ -125,11 +128,12 @@ Some fancy reason why this matters
 
 ```
 resource "aws_rds_instance" $(*) {
-  size = $(*)
+  size = $(somethings)
 }
 ```
         "#;
 
+        // made to fail to see the output
         assert!(matches(terraform_content, document))
     }
 

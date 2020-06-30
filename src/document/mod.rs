@@ -3,10 +3,11 @@ use pulldown_cmark::{
     Parser,
     Tag::{CodeBlock, Heading},
 };
-use tree_sitter::{Node, QueryCursor};
+use tree_sitter::{Node, QueryCursor, QueryPredicateArg};
 
 use super::terraform;
 use ast::AST;
+use regex::Regex;
 use std::io::Read;
 
 mod ast;
@@ -30,10 +31,40 @@ impl Document {
 
         for rule in &self.rules {
             let query = terraform::query(&rule.to_sexp());
+
             let mut matches = cursor
                 .matches(&query, terraform_ast.root_node(), text_callback)
                 .peekable();
             if matches.peek().is_some() {
+                let m = matches.next().unwrap();
+
+                let node_value = |idx: u32| {
+                    let node = m
+                        .captures
+                        .iter()
+                        .find_map(|cap| {
+                            if cap.index == idx {
+                                Some(cap.node)
+                            } else {
+                                None
+                            }
+                        })
+                        .expect(
+                            "capture of index was not in the list of expected captures of query",
+                        );
+                    &content[node.byte_range()]
+                };
+
+                for predicate in query.general_predicates(m.pattern_index) {
+                    for arg in &predicate.args {
+                        match arg {
+                            QueryPredicateArg::String(s) => println!("literal: {}", s),
+                            QueryPredicateArg::Capture(capture_ref) => {
+                                println!("captured: {}", node_value(*capture_ref))
+                            }
+                        }
+                    }
+                }
                 return true;
             }
         }
@@ -50,17 +81,18 @@ pub enum Decision {
 fn sexp(queries: Vec<Query>) -> String {
     queries
         .iter()
-        .map(|query| {
-            format!(
+        .map(|query| match &query.value {
+            None => format!(
+                "(#{op}? @{reference})",
+                op = query.operation,
+                reference = query.reference
+            ),
+            Some(val) => format!(
                 "(#{op}? @{reference} {value})",
                 op = query.operation,
                 reference = query.reference,
-                value = query
-                    .value
-                    .clone()
-                    .map(|q| format!(r#"{:?}"#, q))
-                    .unwrap_or(String::from("*")),
-            )
+                value = format!("{:?}", val)
+            ),
         })
         .collect::<Vec<String>>()
         .join(" ")
@@ -125,6 +157,10 @@ impl Reference {
 }
 
 fn ast(node: Node, source: &str, generator: &mut Reference) -> (Option<AST>, Vec<Query>) {
+    lazy_static! {
+        static ref RE: Regex = Regex::new(r#"\$\((?P<operation>[^)]+)\)"#).unwrap();
+    }
+
     let mut queries = Vec::new();
     if !node.is_named() {
         return (None, queries);
@@ -134,7 +170,10 @@ fn ast(node: Node, source: &str, generator: &mut Reference) -> (Option<AST>, Vec
     let value: String = node.utf8_text(source.as_bytes()).unwrap().into();
 
     if kind == "query" {
-        if value == "$(*)" {
+        let caps = RE.captures(&value).unwrap();
+
+        let operation: String = caps["operation"].trim().to_string();
+        if operation == "*" {
             return (Some(AST::Any), queries);
         }
 
@@ -145,7 +184,7 @@ fn ast(node: Node, source: &str, generator: &mut Reference) -> (Option<AST>, Vec
             }),
             vec![Query {
                 reference,
-                operation: "any".into(), //  Will need to do more parsing here to identify what operator to use
+                operation: operation.into(),
                 value: None,
             }],
         );
@@ -170,13 +209,7 @@ fn ast(node: Node, source: &str, generator: &mut Reference) -> (Option<AST>, Vec
             operation: "eq".into(), // enum here?
             value: Some(value),
         });
-        (
-            Some(AST::Fixed {
-                kind,
-                reference: reference,
-            }),
-            queries,
-        )
+        (Some(AST::Fixed { kind, reference }), queries)
     }
 }
 

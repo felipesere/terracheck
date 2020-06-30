@@ -112,3 +112,8 @@ The semantically equivalent query in `tree-sitter` looks like this:
   (#eq? @val true)
 ) @result
 ```
+
+## Valuable resources
+
+These tests describe possible queries quite nicely:
+[query_test.rs](https://github.com/tree-sitter/tree-sitter/blob/deeeb67a3b20043e05b7197022aa285fa6b1b58c/cli/src/tests/query_test.rs)
