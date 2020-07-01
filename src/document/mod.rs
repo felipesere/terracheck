@@ -3,7 +3,7 @@ use pulldown_cmark::{
     Parser,
     Tag::{CodeBlock, Heading},
 };
-use tree_sitter::{Node, QueryCursor, QueryPredicateArg};
+use tree_sitter::{Node, QueryCursor, QueryPredicate, QueryPredicateArg};
 
 use super::terraform;
 use ast::AST;
@@ -52,24 +52,81 @@ impl Document {
                         .expect(
                             "capture of index was not in the list of expected captures of query",
                         );
-                    &content[node.byte_range()]
+                    content[node.byte_range()].to_string()
                 };
 
-                for predicate in query.general_predicates(m.pattern_index) {
-                    for arg in &predicate.args {
-                        match arg {
-                            QueryPredicateArg::String(s) => println!("literal: {}", s),
-                            QueryPredicateArg::Capture(capture_ref) => {
-                                println!("captured: {}", node_value(*capture_ref))
-                            }
-                        }
-                    }
-                }
-                return true;
+                let funcs: Vec<Box<dyn Predicate>> = query
+                    .general_predicates(m.pattern_index)
+                    .iter()
+                    .map(|query_pred| {
+                        let capture = capture_from(query_pred, node_value);
+                        let options = values_from(query_pred);
+                        return match query_pred.operator.as_ref() {
+                            "or?" => Box::new(Or {
+                                capture: capture.unwrap(),
+                                options,
+                            }),
+                            _ => Box::new(True {}) as Box<dyn Predicate>,
+                        };
+                    })
+                    .collect();
+
+                return funcs.iter().all(|func| func.check());
             }
         }
         false
     }
+}
+
+trait Predicate: std::fmt::Debug {
+    fn check(&self) -> bool;
+}
+
+#[derive(Debug)]
+struct Or {
+    capture: String,
+    options: Vec<String>,
+}
+
+impl Predicate for Or {
+    fn check(&self) -> bool {
+        self.options.contains(&self.capture)
+    }
+}
+
+#[derive(Debug)]
+struct True;
+
+impl Predicate for True {
+    fn check(&self) -> bool {
+        return true;
+    }
+}
+
+fn capture_from<F: Fn(u32) -> String>(
+    predicate: &QueryPredicate,
+    extract_value: F,
+) -> Option<String> {
+    for arg in &predicate.args {
+        match arg {
+            QueryPredicateArg::Capture(cap) => return Some(extract_value(*cap)),
+            _ => continue,
+        }
+    }
+
+    None
+}
+
+fn values_from(predicate: &QueryPredicate) -> Vec<String> {
+    let mut values = Vec::new();
+    for arg in &predicate.args {
+        match arg {
+            QueryPredicateArg::String(s) => values.push(s.to_string()),
+            _ => continue,
+        }
+    }
+
+    values
 }
 
 #[derive(Eq, PartialEq, Debug)]
@@ -207,6 +264,7 @@ fn ast(node: Node, source: &str, generator: &mut Reference) -> (Option<AST>, Vec
         }
 
         let reference = generator.next();
+        // This will need extracting into its own module with a small parser for operations
         if operation.contains("||") {
             let caps = Regex::new("(?P<left>[^ ]+) \\|\\| (?P<right>.+)")
                 .unwrap()
