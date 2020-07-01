@@ -137,6 +137,32 @@ resource "aws_rds_instance" $(*) {
         assert!(matches(terraform_content, document))
     }
 
+    #[test]
+    fn matches_or_expression_in_parens() {
+        let terraform_content = r#"
+resource "aws_rds_instance" "my-db" {
+  size = "t2.large"
+  num  = 12
+}
+        "#;
+
+        let document = r#"
+# Only allow RDS with an explicit size
+
+Some fancy reason why this matters
+
+## Allow: RDS with a size property set
+
+```
+resource "aws_rds_instance" $(*) {
+  num = $(12 || 13)
+}
+```
+        "#;
+
+        assert!(matches(terraform_content, document))
+    }
+
     fn matches(tf: &str, doc_source: &str) -> bool {
         let doc = document::from_reader(doc_source.as_bytes()).expect("unable to create document");
 

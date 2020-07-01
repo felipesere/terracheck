@@ -78,20 +78,42 @@ pub enum Decision {
     Deny,
 }
 
+// Quite a bit of duplication in here...
 fn sexp(queries: Vec<Query>) -> String {
     queries
         .iter()
-        .map(|query| match &query.value {
-            None => format!(
+        .map(|query| match &query.op {
+            Operation::Unknown { operation } => format!(
                 "(#{op}? @{reference})",
-                op = query.operation,
+                op = operation,
                 reference = query.reference
             ),
-            Some(val) => format!(
-                "(#{op}? @{reference} {value})",
-                op = query.operation,
+            Operation::Eq { values } => format!(
+                "(#eq? @{reference} {value})",
                 reference = query.reference,
-                value = format!("{:?}", val)
+                value = values
+                    .iter()
+                    .map(|val| format!("{:?}", val))
+                    .collect::<Vec<String>>()
+                    .join(" "),
+            ),
+            Operation::Match { values } => format!(
+                "(#match? @{reference} {value})",
+                reference = query.reference,
+                value = values
+                    .iter()
+                    .map(|val| format!("{:?}", val))
+                    .collect::<Vec<String>>()
+                    .join(" "),
+            ),
+            Operation::Or { values } => format!(
+                "(#or? @{reference} {value})",
+                reference = query.reference,
+                value = values
+                    .iter()
+                    .map(|val| format!("{:?}", val))
+                    .collect::<Vec<String>>()
+                    .join(" "),
             ),
         })
         .collect::<Vec<String>>()
@@ -99,10 +121,17 @@ fn sexp(queries: Vec<Query>) -> String {
 }
 
 #[derive(Debug)]
+enum Operation {
+    Eq { values: Vec<String> },
+    Match { values: Vec<String> },
+    Or { values: Vec<String> },
+    Unknown { operation: String },
+}
+
+#[derive(Debug)]
 struct Query {
     reference: String,
-    operation: String,
-    value: Option<String>,
+    op: Operation,
 }
 
 #[derive(Debug)]
@@ -178,14 +207,36 @@ fn ast(node: Node, source: &str, generator: &mut Reference) -> (Option<AST>, Vec
         }
 
         let reference = generator.next();
+        if operation.contains("||") {
+            let caps = Regex::new("(?P<left>[^ ]+) \\|\\| (?P<right>.+)")
+                .unwrap()
+                .captures(&operation)
+                .unwrap();
+            let left = caps["left"].trim().to_string();
+            let right = caps["right"].trim().to_string();
+
+            return (
+                Some(AST::WithQuery {
+                    reference: reference.clone(),
+                }),
+                vec![Query {
+                    reference,
+                    op: Operation::Or {
+                        values: vec![left, right],
+                    },
+                }],
+            );
+        }
+
         return (
             Some(AST::WithQuery {
                 reference: reference.clone(),
             }),
             vec![Query {
                 reference,
-                operation: operation.into(),
-                value: None,
+                op: Operation::Unknown {
+                    operation: operation,
+                },
             }],
         );
     }
@@ -206,8 +257,9 @@ fn ast(node: Node, source: &str, generator: &mut Reference) -> (Option<AST>, Vec
         let reference = generator.next();
         queries.push(Query {
             reference: reference.clone(),
-            operation: "eq".into(), // enum here?
-            value: Some(value),
+            op: Operation::Eq {
+                values: vec![value.into()],
+            },
         });
         (Some(AST::Fixed { kind, reference }), queries)
     }
