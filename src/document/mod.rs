@@ -3,14 +3,17 @@ use pulldown_cmark::{
     Parser,
     Tag::{CodeBlock, Heading},
 };
-use tree_sitter::{Node, QueryCursor, QueryPredicate, QueryPredicateArg};
+use tree_sitter::{Node, QueryCursor};
 
 use super::terraform;
 use ast::AST;
 use regex::Regex;
 use std::io::Read;
 
+use operations::Predicate;
+
 mod ast;
+mod operations;
 
 #[derive(Debug)]
 pub struct Document {
@@ -58,17 +61,7 @@ impl Document {
                 let funcs: Vec<Box<dyn Predicate>> = query
                     .general_predicates(m.pattern_index)
                     .iter()
-                    .map(|query_pred| {
-                        let capture = capture_from(query_pred, node_value);
-                        let options = values_from(query_pred);
-                        return match query_pred.operator.as_ref() {
-                            "or?" => Box::new(Or {
-                                capture: capture.unwrap(),
-                                options,
-                            }),
-                            _ => Box::new(True {}) as Box<dyn Predicate>,
-                        };
-                    })
+                    .map(|query_pred| operations::read_operation(query_pred, node_value))
                     .collect();
 
                 return funcs.iter().all(|func| func.check());
@@ -76,57 +69,6 @@ impl Document {
         }
         false
     }
-}
-
-trait Predicate: std::fmt::Debug {
-    fn check(&self) -> bool;
-}
-
-#[derive(Debug)]
-struct Or {
-    capture: String,
-    options: Vec<String>,
-}
-
-impl Predicate for Or {
-    fn check(&self) -> bool {
-        self.options.contains(&self.capture)
-    }
-}
-
-#[derive(Debug)]
-struct True;
-
-impl Predicate for True {
-    fn check(&self) -> bool {
-        return true;
-    }
-}
-
-fn capture_from<F: Fn(u32) -> String>(
-    predicate: &QueryPredicate,
-    extract_value: F,
-) -> Option<String> {
-    for arg in &predicate.args {
-        match arg {
-            QueryPredicateArg::Capture(cap) => return Some(extract_value(*cap)),
-            _ => continue,
-        }
-    }
-
-    None
-}
-
-fn values_from(predicate: &QueryPredicate) -> Vec<String> {
-    let mut values = Vec::new();
-    for arg in &predicate.args {
-        match arg {
-            QueryPredicateArg::String(s) => values.push(s.to_string()),
-            _ => continue,
-        }
-    }
-
-    values
 }
 
 #[derive(Eq, PartialEq, Debug)]
@@ -177,6 +119,13 @@ fn sexp(queries: Vec<Query>) -> String {
         .join(" ")
 }
 
+// Can I reuse this enum with Query (maybe slightly differently shaped) to represent "query" or "predicate" end-to-end, meaning from
+// reading it from AST, to S-EXP, to evaluation?
+// The goal would be that, if you want to add a new thing,
+// it has to be
+// * declare the AST (or 'query' $(...) ) that would match it
+// * how it gets turned into a S-EXP
+// * how it gets evaluated from a QueryPredicate (TS) to `true` or `false`
 #[derive(Debug)]
 enum Operation {
     Eq { values: Vec<String> },
