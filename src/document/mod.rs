@@ -8,6 +8,7 @@ use tree_sitter::{Node, QueryCursor, QueryPredicate, QueryPredicateArg};
 use super::terraform;
 use ast::AST;
 use regex::Regex;
+use std::fmt::{write, Write};
 use std::io::Read;
 
 mod ast;
@@ -34,7 +35,9 @@ impl Document {
         let text_callback = |n: Node| &content[n.byte_range()];
 
         for rule in &self.rules {
-            let query = terraform::query(&rule.to_sexp());
+            let mut output = String::new();
+            rule.to_sexp(&mut output);
+            let query = terraform::query(&output);
 
             let mut matches = cursor
                 .matches(&query, terraform_ast.root_node(), text_callback)
@@ -140,15 +143,15 @@ pub enum Decision {
 }
 
 trait ToSexp {
-    fn to_sexp(&self) -> String;
+    fn to_sexp(&self, output: &mut dyn Write);
 }
 
 impl ToSexp for Vec<Operation> {
-    fn to_sexp(&self) -> String {
-        self.iter()
-            .map(Operation::to_sexp)
-            .collect::<Vec<String>>()
-            .join(" ")
+    fn to_sexp(&self, output: &mut dyn Write) {
+        self.iter().for_each(|op| {
+            op.to_sexp(output);
+            write!(output, " ").unwrap();
+        })
     }
 }
 
@@ -162,28 +165,38 @@ fn join(values: &[String]) -> String {
 }
 
 impl ToSexp for Operation {
-    fn to_sexp(&self) -> String {
+    fn to_sexp(&self, output: &mut dyn Write) {
         match self {
             Operation::Unknown {
                 operation,
                 reference,
-            } => format!("(#{}? @{})", operation, reference,),
-            Operation::Eq { values, reference } => format!(
-                "(#eq? @{reference} {value})",
-                reference = reference,
-                value = join(values),
+            } => write(output, format_args!("(#{}? @{})", operation, reference)),
+            Operation::Eq { values, reference } => write(
+                output,
+                format_args!(
+                    "(#eq? @{reference} {value})",
+                    reference = reference,
+                    value = join(values),
+                ),
             ),
-            Operation::Match { values, reference } => format!(
-                "(#match? @{reference} {value})",
-                reference = reference,
-                value = join(values),
+            Operation::Match { values, reference } => write(
+                output,
+                format_args!(
+                    "(#match? @{reference} {value})",
+                    reference = reference,
+                    value = join(values),
+                ),
             ),
-            Operation::Or { values, reference } => format!(
-                "(#or? @{reference} {value})",
-                reference = reference,
-                value = join(values),
+            Operation::Or { values, reference } => write(
+                output,
+                format_args!(
+                    "(#or? @{reference} {value})",
+                    reference = reference,
+                    value = join(values),
+                ),
             ),
         }
+        .unwrap();
     }
 }
 
@@ -225,18 +238,17 @@ impl Rule {
 }
 
 impl ToSexp for Rule {
-    fn to_sexp(&self) -> String {
+    fn to_sexp(&self, output: &mut dyn Write) {
         let mut parser = terraform::parser();
 
         let tree = parser.parse(&self.code, None).unwrap();
 
         let (nodes, queries) = ast(tree.root_node(), self.code.as_str(), &mut Reference::new());
 
-        format!(
-            "({nodes} {query})",
-            nodes = nodes.unwrap().to_sexp(),
-            query = queries.to_sexp()
-        )
+        write!(output, "(").unwrap();
+        nodes.unwrap().to_sexp(output);
+        queries.to_sexp(output);
+        write!(output, ")").unwrap();
     }
 }
 
@@ -426,9 +438,12 @@ resource "aws_db_instance" $(*) {
             decision: Decision::Allow,
         };
 
+        let mut buffer = String::new();
+        r.to_sexp(&mut buffer);
+
         assert_eq!(
-            r#"((configuration (resource (resource_type) @a (*) (block (attribute (identifier) @b (*)))) @result) (#eq? @a "\"aws_rds_instance\"") (#eq? @b "size"))"#,
-            r.to_sexp()
+            r#"((configuration (resource (resource_type) @a (*) (block (attribute (identifier) @b (*) ) ) ) @result )(#eq? @a "\"aws_rds_instance\"") (#eq? @b "size") )"#,
+            buffer
         )
     }
 }

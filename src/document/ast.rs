@@ -1,4 +1,5 @@
 use crate::document::ToSexp;
+use std::fmt::{write, Write};
 
 #[derive(Debug)]
 pub enum AST {
@@ -17,26 +18,33 @@ pub enum AST {
 }
 
 impl ToSexp for AST {
-    fn to_sexp(&self) -> String {
+    fn to_sexp(&self, output: &mut dyn Write) {
         match self {
-            AST::Any => "(*)".into(),
+            AST::Any => {
+                write!(output, "(*)").unwrap();
+            }
             AST::Container { kind, children } => {
-                let inner = children
-                    .iter()
-                    .map(|child| child.to_sexp())
-                    .collect::<Vec<String>>()
-                    .join(" ");
+                write(output, format_args!("({} ", kind)).unwrap();
+                children.iter().for_each(|child| {
+                    child.to_sexp(output);
+                    write!(output, " ").unwrap();
+                });
+                write!(output, ")").unwrap();
 
                 if kind == "resource" {
-                    format!("({} {}) @result", kind, inner)
-                } else {
-                    format!("({} {})", kind, inner)
-                }
+                    write!(output, " @result").unwrap();
+                };
             }
             AST::Fixed { kind, reference: r } => {
-                format!("({kind}) @{reference}", kind = kind, reference = r)
+                write(
+                    output,
+                    format_args!("({kind}) @{reference}", kind = kind, reference = r),
+                )
+                .unwrap();
             }
-            AST::WithQuery { reference } => format!("(*) @{}", reference),
-        }
+            AST::WithQuery { reference } => {
+                write(output, format_args!("(*) @{}", reference)).unwrap();
+            }
+        };
     }
 }
