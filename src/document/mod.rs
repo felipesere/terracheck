@@ -222,23 +222,21 @@ impl Rule {
             decision: Decision::Deny,
         }
     }
+}
 
-    pub fn to_sexp(&self) -> String {
+impl ToSexp for Rule {
+    fn to_sexp(&self) -> String {
         let mut parser = terraform::parser();
 
         let tree = parser.parse(&self.code, None).unwrap();
 
-        let ast = ast(tree.root_node(), self.code.as_str(), &mut Reference::new());
+        let (nodes, queries) = ast(tree.root_node(), self.code.as_str(), &mut Reference::new());
 
-        if let (Some(nodes), queries) = ast {
-            format!(
-                "({nodes} {query})",
-                nodes = nodes.sexp(),
-                query = queries.to_sexp()
-            )
-        } else {
-            "".into()
-        }
+        format!(
+            "({nodes} {query})",
+            nodes = nodes.unwrap().to_sexp(),
+            query = queries.to_sexp()
+        )
     }
 }
 

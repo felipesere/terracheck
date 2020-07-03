@@ -1,3 +1,5 @@
+use crate::document::ToSexp;
+
 #[derive(Debug)]
 pub enum AST {
     Container {
@@ -14,14 +16,14 @@ pub enum AST {
     Any,
 }
 
-impl AST {
-    pub fn sexp(&self) -> String {
+impl ToSexp for AST {
+    fn to_sexp(&self) -> String {
         match self {
             AST::Any => "(*)".into(),
             AST::Container { kind, children } => {
                 let inner = children
                     .iter()
-                    .map(|child| child.sexp())
+                    .map(|child| child.to_sexp())
                     .collect::<Vec<String>>()
                     .join(" ");
 
