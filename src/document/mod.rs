@@ -12,6 +12,10 @@ use std::io::Read;
 
 mod ast;
 
+lazy_static! {
+    static ref RE: Regex = Regex::new(r#"\$\((?P<operation>[^)]+)\)"#).unwrap();
+}
+
 #[derive(Debug)]
 pub struct Document {
     title: String,
@@ -135,60 +139,72 @@ pub enum Decision {
     Deny,
 }
 
-// Quite a bit of duplication in here...
-fn sexp(queries: Vec<Query>) -> String {
-    queries
+trait ToSexp {
+    fn to_sexp(&self) -> String;
+}
+
+impl ToSexp for Vec<Operation> {
+    fn to_sexp(&self) -> String {
+        self.iter()
+            .map(Operation::to_sexp)
+            .collect::<Vec<String>>()
+            .join(" ")
+    }
+}
+
+// Coudl this just be values.join(" ")?
+fn join(values: &[String]) -> String {
+    values
         .iter()
-        .map(|query| match &query.op {
-            Operation::Unknown { operation } => format!(
-                "(#{op}? @{reference})",
-                op = operation,
-                reference = query.reference
-            ),
-            Operation::Eq { values } => format!(
-                "(#eq? @{reference} {value})",
-                reference = query.reference,
-                value = values
-                    .iter()
-                    .map(|val| format!("{:?}", val))
-                    .collect::<Vec<String>>()
-                    .join(" "),
-            ),
-            Operation::Match { values } => format!(
-                "(#match? @{reference} {value})",
-                reference = query.reference,
-                value = values
-                    .iter()
-                    .map(|val| format!("{:?}", val))
-                    .collect::<Vec<String>>()
-                    .join(" "),
-            ),
-            Operation::Or { values } => format!(
-                "(#or? @{reference} {value})",
-                reference = query.reference,
-                value = values
-                    .iter()
-                    .map(|val| format!("{:?}", val))
-                    .collect::<Vec<String>>()
-                    .join(" "),
-            ),
-        })
+        .map(|val| format!("{:?}", val))
         .collect::<Vec<String>>()
         .join(" ")
 }
 
-#[derive(Debug)]
-enum Operation {
-    Eq { values: Vec<String> },
-    Match { values: Vec<String> },
-    Or { values: Vec<String> },
-    Unknown { operation: String },
+impl ToSexp for Operation {
+    fn to_sexp(&self) -> String {
+        match self {
+            Operation::Unknown {
+                operation,
+                reference,
+            } => format!("(#{}? @{})", operation, reference,),
+            Operation::Eq { values, reference } => format!(
+                "(#eq? @{reference} {value})",
+                reference = reference,
+                value = join(values),
+            ),
+            Operation::Match { values, reference } => format!(
+                "(#match? @{reference} {value})",
+                reference = reference,
+                value = join(values),
+            ),
+            Operation::Or { values, reference } => format!(
+                "(#or? @{reference} {value})",
+                reference = reference,
+                value = join(values),
+            ),
+        }
+    }
 }
 
 #[derive(Debug)]
-struct Query {
-    reference: String,
-    op: Operation,
+enum Operation {
+    Eq {
+        reference: String,
+        values: Vec<String>,
+    },
+    Match {
+        reference: String,
+        values: Vec<String>,
+    },
+    Or {
+        reference: String,
+        values: Vec<String>,
+    },
+    Unknown {
+        reference: String,
+        operation: String,
+    },
 }
 
 #[derive(Debug)]
@@ -218,7 +234,7 @@ impl Rule {
             format!(
                 "({nodes} {query})",
                 nodes = nodes.sexp(),
-                query = sexp(queries)
+                query = queries.to_sexp()
             )
         } else {
             "".into()
@@ -242,11 +258,7 @@ impl Reference {
     }
 }
 
-fn ast(node: Node, source: &str, generator: &mut Reference) -> (Option<AST>, Vec<Query>) {
-    lazy_static! {
-        static ref RE: Regex = Regex::new(r#"\$\((?P<operation>[^)]+)\)"#).unwrap();
-    }
-
+fn ast(node: Node, source: &str, generator: &mut Reference) -> (Option<AST>, Vec<Operation>) {
     let mut queries = Vec::new();
     if !node.is_named() {
         return (None, queries);
@@ -277,11 +289,9 @@ fn ast(node: Node, source: &str, generator: &mut Reference) -> (Option<AST>, Vec
                 Some(AST::WithQuery {
                     reference: reference.clone(),
                 }),
-                vec![Query {
+                vec![Operation::Or {
                     reference,
-                    op: Operation::Or {
-                        values: vec![left, right],
-                    },
+                    values: vec![left, right],
                 }],
             );
         }
@@ -290,11 +300,9 @@ fn ast(node: Node, source: &str, generator: &mut Reference) -> (Option<AST>, Vec
             Some(AST::WithQuery {
                 reference: reference.clone(),
             }),
-            vec![Query {
+            vec![Operation::Unknown {
                 reference,
-                op: Operation::Unknown {
-                    operation: operation,
-                },
+                operation: operation,
             }],
         );
     }
@@ -313,11 +321,9 @@ fn ast(node: Node, source: &str, generator: &mut Reference) -> (Option<AST>, Vec
         (Some(AST::Container { kind, children }), queries)
     } else {
         let reference = generator.next();
-        queries.push(Query {
+        queries.push(Operation::Eq {
             reference: reference.clone(),
-            op: Operation::Eq {
-                values: vec![value.into()],
-            },
+            values: vec![value.into()],
         });
         (Some(AST::Fixed { kind, reference }), queries)
     }
