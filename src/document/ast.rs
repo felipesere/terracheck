@@ -43,3 +43,65 @@ impl ToSexp for AST {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use pretty_assertions::assert_eq;
+
+    #[test]
+    fn any_node_gets_turned_into_tree_sitter_astersisk() {
+        matches_sexp(AST::Any, "(*)")
+    }
+
+    #[test]
+    fn container_prints_its_kind_followed_by_its_children() {
+        matches_sexp(
+            AST::Container {
+                kind: "something".into(),
+                children: vec![Box::new(AST::Any)],
+            },
+            "(something (*) )",
+        )
+    }
+
+    #[test]
+    fn resources_get_an_additional_reference_named_result() {
+        matches_sexp(
+            AST::Container {
+                kind: "resource".into(),
+                children: vec![Box::new(AST::Any)],
+            },
+            "(resource (*) ) @result",
+        )
+    }
+
+    #[test]
+    fn nodes_with_a_fixed_value_use_reference_to_match_later() {
+        matches_sexp(
+            AST::Fixed {
+                kind: "resource_type".into(),
+                reference: "1".into(),
+            },
+            "(resource_type) @1",
+        )
+    }
+
+    #[test]
+    fn nodes_with_query_are_asterisk_with_reference_for_later_matching() {
+        matches_sexp(
+            AST::WithQuery {
+                reference: "1".into(),
+            },
+            "(*) @1",
+        )
+    }
+
+    fn matches_sexp<T: ToSexp>(node: T, sexp: &'static str) {
+        let mut buffer = String::new();
+        node.to_sexp(&mut buffer)
+            .expect("could not write to buffer");
+
+        assert_eq!(&buffer, sexp)
+    }
+}
