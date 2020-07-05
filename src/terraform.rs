@@ -20,6 +20,10 @@ pub fn parser() -> Parser {
 
 include!(concat!(env!("OUT_DIR"), "/is_container.rs"));
 
+pub fn is_query(kind: &str) -> bool {
+    kind == "query"
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

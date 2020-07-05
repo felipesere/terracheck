@@ -268,74 +268,115 @@ impl Reference {
     }
 }
 
-fn ast(node: Node, source: &str, generator: &mut Reference) -> (Option<AST>, Vec<Operation>) {
-    let mut queries = Vec::new();
+fn children<'a>(node: &'a Node) -> Vec<Node<'a>> {
+    let mut nodes = Vec::new();
+    for n in node.children(&mut node.walk()) {
+        nodes.push(n)
+    }
+
+    nodes
+}
+
+enum NodeKind<'a> {
+    Unnamed,
+    Query {
+        value: String,
+    },
+    Container {
+        kind: String,
+        children: Vec<Node<'a>>,
+    },
+    Other {
+        kind: String,
+        value: String,
+    },
+}
+
+fn kind<'a>(node: &'a Node, source: &str) -> NodeKind<'a> {
     if !node.is_named() {
-        return (None, queries);
+        return NodeKind::Unnamed;
     }
 
     let kind: String = node.kind().into();
     let value: String = node.utf8_text(source.as_bytes()).unwrap().into();
 
-    if kind == "query" {
-        let caps = RE.captures(&value).unwrap();
-
-        let operation: String = caps["operation"].trim().to_string();
-        if operation == "*" {
-            return (Some(AST::Any), queries);
+    if terraform::is_query(&kind) {
+        NodeKind::Query { value }
+    } else if terraform::is_container(&kind) {
+        NodeKind::Container {
+            kind,
+            children: children(&node),
         }
+    } else {
+        NodeKind::Other { kind, value }
+    }
+}
 
-        let reference = generator.next();
-        // This will need extracting into its own module with a small parser for operations
-        if operation.contains("||") {
-            let caps = Regex::new("(?P<left>[^ ]+) \\|\\| (?P<right>.+)")
-                .unwrap()
-                .captures(&operation)
-                .unwrap();
-            let left = caps["left"].trim().to_string();
-            let right = caps["right"].trim().to_string();
+fn ast(node: Node, source: &str, generator: &mut Reference) -> (Option<AST>, Vec<Operation>) {
+    let mut queries = Vec::new();
+
+    match kind(&node, source) {
+        NodeKind::Unnamed => (None, queries),
+        NodeKind::Query { value } => {
+            let caps = RE.captures(&value).unwrap();
+
+            let operation: String = caps["operation"].trim().to_string();
+            if operation == "*" {
+                return (Some(AST::Any), queries);
+            }
+
+            let reference = generator.next();
+            // This will need extracting into its own module with a small parser for operations
+            if operation.contains("||") {
+                let caps = Regex::new("(?P<left>[^ ]+) \\|\\| (?P<right>.+)")
+                    .unwrap()
+                    .captures(&operation)
+                    .unwrap();
+                let left = caps["left"].trim().to_string();
+                let right = caps["right"].trim().to_string();
+
+                return (
+                    Some(AST::Referenced {
+                        reference: reference.clone(),
+                    }),
+                    vec![Operation::Or {
+                        reference,
+                        values: vec![left, right],
+                    }],
+                );
+            }
 
             return (
-                Some(AST::WithQuery {
+                Some(AST::Referenced {
                     reference: reference.clone(),
                 }),
-                vec![Operation::Or {
+                vec![Operation::Unknown {
                     reference,
-                    values: vec![left, right],
+                    operation: operation,
                 }],
             );
         }
-
-        return (
-            Some(AST::WithQuery {
-                reference: reference.clone(),
-            }),
-            vec![Operation::Unknown {
-                reference,
-                operation: operation,
-            }],
-        );
-    }
-
-    if terraform::is_container(&kind) {
-        let mut children: Vec<Box<AST>> = Vec::new();
-        for child in node.children(&mut node.walk()) {
-            match ast(child, &source, generator) {
-                (None, _) => continue,
-                (Some(ast), mut new_queries) => {
-                    children.push(Box::new(ast));
-                    queries.append(&mut new_queries);
+        NodeKind::Container { kind, children } => {
+            let mut x: Vec<Box<AST>> = Vec::new();
+            for child in children {
+                match ast(child, &source, generator) {
+                    (None, _) => continue,
+                    (Some(ast), mut new_queries) => {
+                        x.push(Box::new(ast));
+                        queries.append(&mut new_queries);
+                    }
                 }
             }
+            return (Some(AST::Container { kind, children: x }), queries);
         }
-        (Some(AST::Container { kind, children }), queries)
-    } else {
-        let reference = generator.next();
-        queries.push(Operation::Eq {
-            reference: reference.clone(),
-            values: vec![value.into()],
-        });
-        (Some(AST::Fixed { kind, reference }), queries)
+        NodeKind::Other { kind, value } => {
+            let reference = generator.next();
+            queries.push(Operation::Eq {
+                reference: reference.clone(),
+                values: vec![value],
+            });
+            return (Some(AST::Fixed { kind, reference }), queries);
+        }
     }
 }
 

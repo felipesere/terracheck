@@ -11,7 +11,7 @@ pub enum AST {
         kind: String,
         reference: String,
     },
-    WithQuery {
+    Referenced {
         reference: String,
     },
     Any,
@@ -39,7 +39,7 @@ impl ToSexp for AST {
                 output,
                 format_args!("({kind}) @{reference}", kind = kind, reference = r),
             ),
-            AST::WithQuery { reference } => write(output, format_args!("(*) @{}", reference)),
+            AST::Referenced { reference } => write(output, format_args!("(*) @{}", reference)),
         }
     }
 }
@@ -90,7 +90,7 @@ mod tests {
     #[test]
     fn nodes_with_query_are_asterisk_with_reference_for_later_matching() {
         matches_sexp(
-            AST::WithQuery {
+            AST::Referenced {
                 reference: "1".into(),
             },
             "(*) @1",
