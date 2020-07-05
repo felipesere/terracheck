@@ -18,33 +18,28 @@ pub enum AST {
 }
 
 impl ToSexp for AST {
-    fn to_sexp(&self, output: &mut dyn Write) {
+    fn to_sexp(&self, output: &mut dyn Write) -> std::fmt::Result {
         match self {
-            AST::Any => {
-                write!(output, "(*)").unwrap();
-            }
+            AST::Any => write!(output, "(*)"),
             AST::Container { kind, children } => {
-                write(output, format_args!("({} ", kind)).unwrap();
-                children.iter().for_each(|child| {
-                    child.to_sexp(output);
-                    write!(output, " ").unwrap();
-                });
-                write!(output, ")").unwrap();
+                write(output, format_args!("({} ", kind))?;
+                children.iter().try_for_each(|child| {
+                    child.to_sexp(output)?;
+                    write!(output, " ")
+                })?;
+                write!(output, ")")?;
 
                 if kind == "resource" {
-                    write!(output, " @result").unwrap();
-                };
+                    write!(output, " @result")
+                } else {
+                    Result::Ok(())
+                }
             }
-            AST::Fixed { kind, reference: r } => {
-                write(
-                    output,
-                    format_args!("({kind}) @{reference}", kind = kind, reference = r),
-                )
-                .unwrap();
-            }
-            AST::WithQuery { reference } => {
-                write(output, format_args!("(*) @{}", reference)).unwrap();
-            }
-        };
+            AST::Fixed { kind, reference: r } => write(
+                output,
+                format_args!("({kind}) @{reference}", kind = kind, reference = r),
+            ),
+            AST::WithQuery { reference } => write(output, format_args!("(*) @{}", reference)),
+        }
     }
 }

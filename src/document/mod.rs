@@ -8,7 +8,7 @@ use tree_sitter::{Node, QueryCursor, QueryPredicate, QueryPredicateArg};
 use super::terraform;
 use ast::AST;
 use regex::Regex;
-use std::fmt::{write, Write};
+use std::fmt::{self, write, Write};
 use std::io::Read;
 
 mod ast;
@@ -36,7 +36,8 @@ impl Document {
 
         for rule in &self.rules {
             let mut output = String::new();
-            rule.to_sexp(&mut output);
+            rule.to_sexp(&mut output)
+                .expect("unable to turn rule into s-exp");
             let query = terraform::query(&output);
 
             let mut matches = cursor
@@ -143,14 +144,14 @@ pub enum Decision {
 }
 
 trait ToSexp {
-    fn to_sexp(&self, output: &mut dyn Write);
+    fn to_sexp(&self, output: &mut dyn Write) -> fmt::Result;
 }
 
 impl ToSexp for Vec<Operation> {
-    fn to_sexp(&self, output: &mut dyn Write) {
-        self.iter().for_each(|op| {
-            op.to_sexp(output);
-            write!(output, " ").unwrap();
+    fn to_sexp(&self, output: &mut dyn Write) -> fmt::Result {
+        self.iter().try_for_each(|op| {
+            op.to_sexp(output)?;
+            write!(output, " ")
         })
     }
 }
@@ -165,7 +166,7 @@ fn join(values: &[String]) -> String {
 }
 
 impl ToSexp for Operation {
-    fn to_sexp(&self, output: &mut dyn Write) {
+    fn to_sexp(&self, output: &mut dyn Write) -> fmt::Result {
         match self {
             Operation::Unknown {
                 operation,
@@ -196,7 +197,6 @@ impl ToSexp for Operation {
                 ),
             ),
         }
-        .unwrap();
     }
 }
 
@@ -238,17 +238,17 @@ impl Rule {
 }
 
 impl ToSexp for Rule {
-    fn to_sexp(&self, output: &mut dyn Write) {
+    fn to_sexp(&self, output: &mut dyn Write) -> fmt::Result {
         let mut parser = terraform::parser();
 
         let tree = parser.parse(&self.code, None).unwrap();
 
         let (nodes, queries) = ast(tree.root_node(), self.code.as_str(), &mut Reference::new());
 
-        write!(output, "(").unwrap();
-        nodes.unwrap().to_sexp(output);
-        queries.to_sexp(output);
-        write!(output, ")").unwrap();
+        write!(output, "(")?;
+        nodes.unwrap().to_sexp(output)?;
+        queries.to_sexp(output)?;
+        write!(output, ")")
     }
 }
 
@@ -439,7 +439,7 @@ resource "aws_db_instance" $(*) {
         };
 
         let mut buffer = String::new();
-        r.to_sexp(&mut buffer);
+        r.to_sexp(&mut buffer).unwrap();
 
         assert_eq!(
             r#"((configuration (resource (resource_type) @a (*) (block (attribute (identifier) @b (*) ) ) ) @result )(#eq? @a "\"aws_rds_instance\"") (#eq? @b "size") )"#,
