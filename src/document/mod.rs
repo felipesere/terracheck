@@ -8,10 +8,12 @@ use tree_sitter::{Node, QueryCursor, QueryPredicate, QueryPredicateArg};
 use super::terraform;
 use ast::AST;
 use regex::Regex;
+use rule::{Decision, Rule};
 use std::fmt::{self, write, Write};
 use std::io::Read;
 
 mod ast;
+mod rule;
 
 lazy_static! {
     static ref RE: Regex = Regex::new(r#"\$\((?P<operation>[^)]+)\)"#).unwrap();
@@ -137,12 +139,6 @@ fn values_from(predicate: &QueryPredicate) -> Vec<String> {
     values
 }
 
-#[derive(Eq, PartialEq, Debug)]
-pub enum Decision {
-    Allow,
-    Deny,
-}
-
 trait ToSexp {
     fn to_sexp(&self, output: &mut dyn Write) -> fmt::Result;
 }
@@ -218,38 +214,6 @@ enum Query {
         reference: String,
         operation: String,
     },
-}
-
-#[derive(Debug)]
-pub struct Rule {
-    pub title: String,
-    pub code: String,
-    pub decision: Decision,
-}
-
-impl Rule {
-    fn empty() -> Self {
-        Rule {
-            title: "".into(),
-            code: "".into(),
-            decision: Decision::Deny,
-        }
-    }
-}
-
-impl ToSexp for Rule {
-    fn to_sexp(&self, output: &mut dyn Write) -> fmt::Result {
-        let mut parser = terraform::parser();
-
-        let tree = parser.parse(&self.code, None).unwrap();
-
-        let (nodes, queries) = ast(tree.root_node(), self.code.as_str(), &mut Reference::new());
-
-        write!(output, "(")?;
-        nodes.unwrap().to_sexp(output)?;
-        queries.to_sexp(output)?;
-        write!(output, ")")
-    }
 }
 
 pub struct Reference {
