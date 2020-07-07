@@ -1,4 +1,4 @@
-use crate::document::ToSexp;
+use super::rule::ToSexp;
 use std::fmt::{write, Write};
 
 #[derive(Debug)]
