@@ -1,14 +1,12 @@
 #![allow(dead_code)]
 
-use colored::*;
-use glob::glob;
-use std::fs::read_to_string;
-use std::path::PathBuf;
-use tree_sitter::Parser;
-
 use argh::FromArgs;
+use check::Check;
+use show::Show;
 
+mod check;
 mod document;
+mod show;
 mod terraform;
 
 #[macro_use]
@@ -21,21 +19,8 @@ struct Args {
     subcommand: Subcommand,
 }
 
-#[derive(FromArgs)]
-/// Prints everything that was parsed
-#[argh(subcommand, name = "show")]
-struct Show {
-    /// whether to show only errors
-    #[argh(switch, short = 'e')]
-    errors: bool,
-}
-
-#[derive(FromArgs)]
-/// Verifies if any terraform resource matches the rule in the markdown file
-#[argh(subcommand, name = "check")]
-struct Check {
-    #[argh(positional)]
-    path: PathBuf,
+pub trait Run {
+    fn run(self);
 }
 
 #[derive(FromArgs)]
@@ -46,69 +31,9 @@ enum Subcommand {
 }
 
 fn main() {
-    let parser = terraform::parser();
     match argh::from_env::<Args>().subcommand {
-        Subcommand::Show(s) => parse_all(parser, s.errors),
-        Subcommand::Check(c) => run_check(c.path),
-    }
-}
-
-fn run_check(rule_file: PathBuf) {
-    use std::fs::File;
-
-    let file = File::open(rule_file).expect("could not open rule file");
-
-    let doc = document::from_reader(&file).expect("was not able to parse markdown");
-
-    for entry in glob("**/*.tf").expect("Failed to read glob pattern") {
-        match entry {
-            Ok(path) => {
-                let terraform_content = read_to_string(&path).unwrap();
-
-                if doc.matches(terraform_content.as_bytes()) {
-                    println!("{}\n", path.to_str().unwrap());
-                }
-            }
-            err => println!("error: {:?}", err),
-        }
-    }
-}
-
-fn parse_all(mut parser: Parser, only_errors: bool) {
-    for entry in glob("**/*.tf").expect("Failed to read glob pattern") {
-        match entry {
-            Ok(path) => {
-                let content = read_to_string(&path).unwrap();
-                println!("*****");
-                println!("{}", path.to_str().unwrap().blue());
-
-                let tree = parser.parse(&content, None).unwrap();
-
-                let mut cursor = tree.root_node().walk();
-                // Skip (comfiguration)
-                cursor.goto_first_child();
-                loop {
-                    let node = cursor.node();
-
-                    if node.has_error() {
-                        println!("{}", node.utf8_text(&content.as_bytes()).unwrap().red());
-                        println!("{}", node.to_sexp().red());
-                        println!("");
-                    } else if !only_errors {
-                        println!("{}", node.utf8_text(&content.as_bytes()).unwrap());
-                        println!("{}", node.to_sexp());
-                        println!("");
-                    }
-
-                    if !cursor.goto_next_sibling() {
-                        break;
-                    }
-                }
-
-                println!("");
-            }
-            Err(e) => println!("{:?}", e),
-        }
+        Subcommand::Show(s) => s.run(),
+        Subcommand::Check(c) => c.run(),
     }
 }
 
