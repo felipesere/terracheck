@@ -201,7 +201,7 @@ impl ToSexp for Operation {
 }
 
 #[derive(Debug)]
-enum Operation {
+pub enum Operation {
     Eq {
         reference: String,
         values: Vec<String>,
@@ -252,7 +252,7 @@ impl ToSexp for Rule {
     }
 }
 
-struct Reference {
+pub struct Reference {
     chars: Box<dyn Iterator<Item = char>>,
 }
 
@@ -313,71 +313,83 @@ fn kind<'a>(node: &'a Node, source: &str) -> NodeKind<'a> {
 }
 
 fn ast(node: Node, source: &str, generator: &mut Reference) -> (Option<AST>, Vec<Operation>) {
-    let mut queries = Vec::new();
-
     match kind(&node, source) {
-        NodeKind::Unnamed => (None, queries),
-        NodeKind::Query { value } => {
-            let caps = RE.captures(&value).unwrap();
-
-            let operation: String = caps["operation"].trim().to_string();
-            if operation == "*" {
-                return (Some(AST::Any), queries);
-            }
-
-            let reference = generator.next();
-            // This will need extracting into its own module with a small parser for operations
-            if operation.contains("||") {
-                let caps = Regex::new("(?P<left>[^ ]+) \\|\\| (?P<right>.+)")
-                    .unwrap()
-                    .captures(&operation)
-                    .unwrap();
-                let left = caps["left"].trim().to_string();
-                let right = caps["right"].trim().to_string();
-
-                return (
-                    Some(AST::Referenced {
-                        reference: reference.clone(),
-                    }),
-                    vec![Operation::Or {
-                        reference,
-                        values: vec![left, right],
-                    }],
-                );
-            }
-
-            return (
-                Some(AST::Referenced {
-                    reference: reference.clone(),
-                }),
-                vec![Operation::Unknown {
-                    reference,
-                    operation: operation,
-                }],
-            );
-        }
+        NodeKind::Unnamed => (None, Vec::new()),
+        NodeKind::Query { value } => prcoess_query(value, generator),
         NodeKind::Container { kind, children } => {
-            let mut x: Vec<Box<AST>> = Vec::new();
+            let mut queries = Vec::new();
+            let mut children_ast: Vec<Box<AST>> = Vec::new();
             for child in children {
                 match ast(child, &source, generator) {
                     (None, _) => continue,
                     (Some(ast), mut new_queries) => {
-                        x.push(Box::new(ast));
+                        children_ast.push(Box::new(ast));
                         queries.append(&mut new_queries);
                     }
                 }
             }
-            return (Some(AST::Container { kind, children: x }), queries);
+            return (
+                Some(AST::Container {
+                    kind,
+                    children: children_ast,
+                }),
+                queries,
+            );
         }
         NodeKind::Other { kind, value } => {
             let reference = generator.next();
-            queries.push(Operation::Eq {
-                reference: reference.clone(),
-                values: vec![value],
-            });
-            return (Some(AST::Fixed { kind, reference }), queries);
+            return (
+                Some(AST::Fixed {
+                    kind,
+                    reference: reference.clone(),
+                }),
+                vec![Operation::Eq {
+                    reference: reference,
+                    values: vec![value],
+                }],
+            );
         }
     }
+}
+
+pub fn prcoess_query(value: String, generator: &mut Reference) -> (Option<AST>, Vec<Operation>) {
+    let caps = RE.captures(&value).unwrap();
+
+    let operation: String = caps["operation"].trim().to_string();
+    if operation == "*" {
+        return (Some(AST::Any), Vec::new());
+    }
+
+    let reference = generator.next();
+    // This will need extracting into its own module with a small parser for operations
+    if operation.contains("||") {
+        let caps = Regex::new("(?P<left>[^ ]+) \\|\\| (?P<right>.+)")
+            .unwrap()
+            .captures(&operation)
+            .unwrap();
+        let left = caps["left"].trim().to_string();
+        let right = caps["right"].trim().to_string();
+
+        return (
+            Some(AST::Referenced {
+                reference: reference.clone(),
+            }),
+            vec![Operation::Or {
+                reference,
+                values: vec![left, right],
+            }],
+        );
+    }
+
+    return (
+        Some(AST::Referenced {
+            reference: reference.clone(),
+        }),
+        vec![Operation::Unknown {
+            reference,
+            operation: operation,
+        }],
+    );
 }
 
 pub fn from_reader<R: Read>(mut input: R) -> Option<Document> {
