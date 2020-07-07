@@ -147,7 +147,7 @@ trait ToSexp {
     fn to_sexp(&self, output: &mut dyn Write) -> fmt::Result;
 }
 
-impl ToSexp for Vec<Operation> {
+impl ToSexp for Vec<Query> {
     fn to_sexp(&self, output: &mut dyn Write) -> fmt::Result {
         self.iter().try_for_each(|op| {
             op.to_sexp(output)?;
@@ -165,14 +165,14 @@ fn join(values: &[String]) -> String {
         .join(" ")
 }
 
-impl ToSexp for Operation {
+impl ToSexp for Query {
     fn to_sexp(&self, output: &mut dyn Write) -> fmt::Result {
         match self {
-            Operation::Unknown {
+            Query::Unknown {
                 operation,
                 reference,
             } => write(output, format_args!("(#{}? @{})", operation, reference)),
-            Operation::Eq { values, reference } => write(
+            Query::Eq { values, reference } => write(
                 output,
                 format_args!(
                     "(#eq? @{reference} {value})",
@@ -180,7 +180,7 @@ impl ToSexp for Operation {
                     value = join(values),
                 ),
             ),
-            Operation::Match { values, reference } => write(
+            Query::Match { values, reference } => write(
                 output,
                 format_args!(
                     "(#match? @{reference} {value})",
@@ -188,7 +188,7 @@ impl ToSexp for Operation {
                     value = join(values),
                 ),
             ),
-            Operation::Or { values, reference } => write(
+            Query::Or { values, reference } => write(
                 output,
                 format_args!(
                     "(#or? @{reference} {value})",
@@ -201,7 +201,7 @@ impl ToSexp for Operation {
 }
 
 #[derive(Debug)]
-pub enum Operation {
+enum Query {
     Eq {
         reference: String,
         values: Vec<String>,
@@ -312,7 +312,7 @@ fn kind<'a>(node: &'a Node, source: &str) -> NodeKind<'a> {
     }
 }
 
-fn ast(node: Node, source: &str, generator: &mut Reference) -> (Option<AST>, Vec<Operation>) {
+fn ast(node: Node, source: &str, generator: &mut Reference) -> (Option<AST>, Vec<Query>) {
     match kind(&node, source) {
         NodeKind::Unnamed => (None, Vec::new()),
         NodeKind::Query { value } => prcoess_query(value, generator),
@@ -343,7 +343,7 @@ fn ast(node: Node, source: &str, generator: &mut Reference) -> (Option<AST>, Vec
                     kind,
                     reference: reference.clone(),
                 }),
-                vec![Operation::Eq {
+                vec![Query::Eq {
                     reference: reference,
                     values: vec![value],
                 }],
@@ -352,7 +352,7 @@ fn ast(node: Node, source: &str, generator: &mut Reference) -> (Option<AST>, Vec
     }
 }
 
-pub fn prcoess_query(value: String, generator: &mut Reference) -> (Option<AST>, Vec<Operation>) {
+fn prcoess_query(value: String, generator: &mut Reference) -> (Option<AST>, Vec<Query>) {
     let caps = RE.captures(&value).unwrap();
 
     let operation: String = caps["operation"].trim().to_string();
@@ -374,7 +374,7 @@ pub fn prcoess_query(value: String, generator: &mut Reference) -> (Option<AST>, 
             Some(AST::Referenced {
                 reference: reference.clone(),
             }),
-            vec![Operation::Or {
+            vec![Query::Or {
                 reference,
                 values: vec![left, right],
             }],
@@ -385,7 +385,7 @@ pub fn prcoess_query(value: String, generator: &mut Reference) -> (Option<AST>, 
         Some(AST::Referenced {
             reference: reference.clone(),
         }),
-        vec![Operation::Unknown {
+        vec![Query::Unknown {
             reference,
             operation: operation,
         }],
