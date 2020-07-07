@@ -1,10 +1,12 @@
 #![allow(dead_code)]
 
-use clap::{App, Arg};
 use colored::*;
 use glob::glob;
 use std::fs::read_to_string;
+use std::path::PathBuf;
 use tree_sitter::Parser;
+
+use argh::FromArgs;
 
 mod document;
 mod terraform;
@@ -12,42 +14,46 @@ mod terraform;
 #[macro_use]
 extern crate lazy_static;
 
+#[derive(FromArgs)]
+/// Checks terraform files for patterns
+struct Args {
+    #[argh(subcommand)]
+    subcommand: Subcommand,
+}
+
+#[derive(FromArgs)]
+/// Prints everything that was parsed
+#[argh(subcommand, name = "show")]
+struct Show {
+    /// whether to show only errors
+    #[argh(switch, short = 'e')]
+    errors: bool,
+}
+
+#[derive(FromArgs)]
+/// Verifies if any terraform resource matches the rule in the markdown file
+#[argh(subcommand, name = "check")]
+struct Check {
+    #[argh(positional)]
+    path: PathBuf,
+}
+
+#[derive(FromArgs)]
+#[argh(subcommand)]
+enum Subcommand {
+    Show(Show),
+    Check(Check),
+}
+
 fn main() {
-    let matches = App::new("My Super Program")
-        .version("0.1")
-        .about("Checks terraform files for patterns")
-        .subcommand(
-            App::new("show")
-                .arg(
-                    Arg::new("error_only")
-                        .about("only print errors for easier debugging")
-                        .long("--errors")
-                        .short('e')
-                        .required(false),
-                )
-                .about("Prints everythinng that was parsed"),
-        )
-        .subcommand(
-            App::new("check").arg(
-                Arg::new("rule_file")
-                    .about("Verifies if any resource matches the rule in the markdown file")
-                    .value_name("RULE_FILE")
-                    .takes_value(true)
-                    .required(true),
-            ),
-        )
-        .get_matches();
-
     let parser = terraform::parser();
-
-    match matches.subcommand() {
-        ("show", Some(show_matches)) => parse_all(parser, show_matches.is_present("error_only")),
-        ("check", Some(check_matches)) => run_check(check_matches.value_of("rule_file").unwrap()),
-        _ => println!("Unknown command"),
+    match argh::from_env::<Args>().subcommand {
+        Subcommand::Show(s) => parse_all(parser, s.errors),
+        Subcommand::Check(c) => run_check(c.path),
     }
 }
 
-fn run_check(rule_file: &str) {
+fn run_check(rule_file: PathBuf) {
     use std::fs::File;
 
     let file = File::open(rule_file).expect("could not open rule file");
