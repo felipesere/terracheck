@@ -3,7 +3,7 @@ use pulldown_cmark::{
     Parser,
     Tag::{CodeBlock, Heading},
 };
-use tree_sitter::{Node, QueryCursor, QueryPredicate, QueryPredicateArg};
+use tree_sitter::Node;
 
 use super::terraform;
 use ast::AST;
@@ -27,64 +27,20 @@ pub struct Document {
 
 impl Document {
     pub fn matches<R: Read>(&self, mut terraform: R) -> bool {
-        let mut cursor = QueryCursor::new();
         let mut parser = crate::terraform::parser();
         let mut content = String::new();
         terraform
             .read_to_string(&mut content)
             .expect("unable to read terraform code");
         let terraform_ast = parser.parse(&content, None).unwrap();
-        let text_callback = |n: Node| &content[n.byte_range()];
 
         for rule in &self.rules {
-            let mut output = String::new();
-            rule.to_sexp(&mut output)
-                .expect("unable to turn rule into s-exp");
-            let query = terraform::query(&output);
-
-            let mut matches = cursor
-                .matches(&query, terraform_ast.root_node(), text_callback)
-                .peekable();
-            if matches.peek().is_some() {
-                let m = matches.next().unwrap();
-
-                let node_value = |idx: u32| {
-                    let node = m
-                        .captures
-                        .iter()
-                        .find_map(|cap| {
-                            if cap.index == idx {
-                                Some(cap.node)
-                            } else {
-                                None
-                            }
-                        })
-                        .expect(
-                            "capture of index was not in the list of expected captures of query",
-                        );
-                    content[node.byte_range()].to_string()
-                };
-
-                let funcs: Vec<Box<dyn Predicate>> = query
-                    .general_predicates(m.pattern_index)
-                    .iter()
-                    .map(|query_pred| {
-                        let capture = capture_from(query_pred, node_value);
-                        let options = values_from(query_pred);
-                        return match query_pred.operator.as_ref() {
-                            "or?" => Box::new(Or {
-                                capture: capture.unwrap(),
-                                options,
-                            }),
-                            _ => Box::new(True {}) as Box<dyn Predicate>,
-                        };
-                    })
-                    .collect();
-
-                return funcs.iter().all(|func| func.check());
+            if !rule.matches(&terraform_ast, &content) {
+                return false;
             }
         }
-        false
+
+        true
     }
 }
 
@@ -111,32 +67,6 @@ impl Predicate for True {
     fn check(&self) -> bool {
         return true;
     }
-}
-
-fn capture_from<F: Fn(u32) -> String>(
-    predicate: &QueryPredicate,
-    extract_value: F,
-) -> Option<String> {
-    for arg in &predicate.args {
-        match arg {
-            QueryPredicateArg::Capture(cap) => return Some(extract_value(*cap)),
-            _ => continue,
-        }
-    }
-
-    None
-}
-
-fn values_from(predicate: &QueryPredicate) -> Vec<String> {
-    let mut values = Vec::new();
-    for arg in &predicate.args {
-        match arg {
-            QueryPredicateArg::String(s) => values.push(s.to_string()),
-            _ => continue,
-        }
-    }
-
-    values
 }
 
 trait ToSexp {
