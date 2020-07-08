@@ -24,6 +24,7 @@ impl Document {
             .expect("unable to read terraform code");
         let terraform_ast = parser.parse(&content, None).unwrap();
 
+        // this will need to grow
         for rule in &self.rules {
             if !rule.matches(&terraform_ast, &content) {
                 return false;
@@ -87,7 +88,6 @@ fn consume_text(p: &mut Parser) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::document::rule::ToSexp;
     use pretty_assertions::assert_eq;
 
     #[test]
@@ -119,27 +119,5 @@ resource "aws_db_instance" $(*) {
         assert_eq!(doc.title, "Only allow MySQL rds instances");
         assert_eq!(doc.rules[0].decision, Decision::Allow);
         assert_eq!(doc.rules[1].decision, Decision::Deny);
-    }
-
-    #[test]
-    fn turns_a_rule_into_s_expression() {
-        let r = Rule {
-            title: "Example".into(),
-            code: r#"
-                    resource "aws_rds_instance" $(*) {
-                        size = $(*)
-                    }
-                    "#
-            .into(),
-            decision: Decision::Allow,
-        };
-
-        let mut buffer = String::new();
-        r.to_sexp(&mut buffer).unwrap();
-
-        assert_eq!(
-            r#"((configuration (resource (resource_type) @a (*) (block (attribute (identifier) @b (*) ) ) ) @result )(#eq? @a "aws_rds_instance") (#eq? @b size) )"#,
-            buffer
-        )
     }
 }

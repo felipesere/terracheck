@@ -354,3 +354,29 @@ fn prcoess_query(value: String, generator: &mut Reference) -> (Option<AST>, Vec<
         }],
     );
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn turns_a_rule_into_s_expression() {
+        let r = Rule {
+            title: "Example".into(),
+            code: r#"
+                    resource "aws_rds_instance" $(*) {
+                        size = $(*)
+                    }
+                    "#
+            .into(),
+            decision: Decision::Allow,
+        };
+
+        let mut buffer = String::new();
+        r.to_sexp(&mut buffer).unwrap();
+
+        assert_eq!(
+            r#"((configuration (resource (resource_type) @a (*) (block (attribute (identifier) @b (*) ) ) ) @result )(#eq? @a "aws_rds_instance") (#eq? @b size) )"#,
+            buffer
+        )
+    }
+}
