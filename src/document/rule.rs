@@ -160,15 +160,6 @@ impl ToSexp for Vec<Query> {
     }
 }
 
-// Coudl this just be values.join(" ")?
-fn join(values: &[String]) -> String {
-    values
-        .iter()
-        .map(|val| format!("{:?}", val))
-        .collect::<Vec<String>>()
-        .join(" ")
-}
-
 impl ToSexp for Query {
     fn to_sexp(&self, output: &mut dyn Write) -> fmt::Result {
         match self {
@@ -181,7 +172,7 @@ impl ToSexp for Query {
                 format_args!(
                     "(#eq? @{reference} {value})",
                     reference = reference,
-                    value = join(values),
+                    value = values.join(" "),
                 ),
             ),
             Query::Match { values, reference } => write(
@@ -189,7 +180,7 @@ impl ToSexp for Query {
                 format_args!(
                     "(#match? @{reference} {value})",
                     reference = reference,
-                    value = join(values),
+                    value = values.join(" "),
                 ),
             ),
             Query::Or { values, reference } => write(
@@ -197,7 +188,7 @@ impl ToSexp for Query {
                 format_args!(
                     "(#or? @{reference} {value})",
                     reference = reference,
-                    value = join(values),
+                    value = values.join(" "),
                 ),
             ),
         }

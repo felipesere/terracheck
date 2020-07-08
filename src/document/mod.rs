@@ -138,7 +138,7 @@ resource "aws_db_instance" $(*) {
         r.to_sexp(&mut buffer).unwrap();
 
         assert_eq!(
-            r#"((configuration (resource (resource_type) @a (*) (block (attribute (identifier) @b (*) ) ) ) @result )(#eq? @a "\"aws_rds_instance\"") (#eq? @b "size") )"#,
+            r#"((configuration (resource (resource_type) @a (*) (block (attribute (identifier) @b (*) ) ) ) @result )(#eq? @a "aws_rds_instance") (#eq? @b size) )"#,
             buffer
         )
     }
