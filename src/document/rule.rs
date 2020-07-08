@@ -2,6 +2,7 @@ use crate::document::ast::AST;
 use crate::terraform;
 use regex::Regex;
 use std::fmt::{self, write, Write};
+use std::iter::successors;
 use tree_sitter::{Node, QueryCursor, QueryPredicate, QueryPredicateArg, Tree};
 
 lazy_static! {
@@ -216,18 +217,18 @@ enum Query {
 }
 
 pub struct Reference {
-    chars: Box<dyn Iterator<Item = char>>,
+    chars: Box<dyn Iterator<Item = String>>,
 }
 
 impl Reference {
     fn new() -> Self {
         Reference {
-            chars: Box::new("abcdefghijklmnopqrstuvwxyz".chars()),
+            chars: Box::new(successors(Some(1), |n| Some(n + 1)).map(|n| n.to_string())),
         }
     }
 
     fn next(&mut self) -> String {
-        self.chars.next().unwrap().to_string()
+        self.chars.next().unwrap()
     }
 }
 
@@ -358,6 +359,8 @@ fn prcoess_query(value: String, generator: &mut Reference) -> (Option<AST>, Vec<
 #[cfg(test)]
 mod tests {
     use super::*;
+    use pretty_assertions::assert_eq;
+
     #[test]
     fn turns_a_rule_into_s_expression() {
         let r = Rule {
@@ -375,7 +378,7 @@ mod tests {
         r.to_sexp(&mut buffer).unwrap();
 
         assert_eq!(
-            r#"((configuration (resource (resource_type) @a (*) (block (attribute (identifier) @b (*) ) ) ) @result )(#eq? @a "aws_rds_instance") (#eq? @b size) )"#,
+            r#"((configuration (resource (resource_type) @1 (*) (block (attribute (identifier) @2 (*) ) ) ) @result )(#eq? @1 "aws_rds_instance") (#eq? @2 size) )"#,
             buffer
         )
     }
