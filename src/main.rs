@@ -62,6 +62,13 @@ resource "aws_rds_instance" $(*) {
   size = $(somethings)
 }
 ```
+
+## Deny: Any other RDS
+
+```
+resource "aws_rds_instance" $(*) {
+}
+```
         "#;
 
         // made to fail to see the output

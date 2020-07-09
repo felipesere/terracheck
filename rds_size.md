@@ -9,3 +9,9 @@ resource "aws_rds_instance" $(*) {
   num = $(*)
 }
 ```
+
+## Deny: Any other RDS
+
+```terraform
+resource "aws_rds_instance" $(*) {
+}

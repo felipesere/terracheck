@@ -3,7 +3,7 @@ use pulldown_cmark::{
     Parser,
     Tag::{CodeBlock, Heading},
 };
-use rule::{Decision, Rule};
+use rule::{Decision, MatchResult, Rule};
 use std::io::Read;
 
 mod ast;
@@ -25,13 +25,20 @@ impl Document {
         let terraform_ast = parser.parse(&content, None).unwrap();
 
         // this will need to grow
-        for rule in &self.rules {
-            if !rule.matches(&terraform_ast, &content) {
-                return false;
-            }
-        }
+        let matches: Vec<_> = self
+            .rules
+            .iter()
+            .map(|r| r.matches(&terraform_ast, &content))
+            .collect();
 
-        true
+        matches.iter().any(|m| match m {
+            MatchResult::Matched {
+                decision: Decision::Allow,
+                node_info: _,
+                title: _,
+            } => true,
+            _ => false,
+        })
     }
 }
 
