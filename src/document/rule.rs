@@ -48,7 +48,7 @@ impl Rule {
         }
     }
 
-    pub(crate) fn matches(&self, terraform_ast: &Tree, text: &str) -> MatchResult {
+    pub(crate) fn matches(&self, terraform_ast: &Tree, text: &str) -> Vec<MatchResult> {
         let mut cursor = QueryCursor::new();
         let mut output = String::new();
         self.to_sexp(&mut output)
@@ -63,61 +63,55 @@ impl Rule {
 
         let text_callback = |n: Node| &text[n.byte_range()];
 
-        // I will need to work through all possible matches here,
-        // as "a single AST" might very well contain multiple resources
-        // that need to be matched individually
-        let matches = cursor
+        cursor
             .matches(&query, terraform_ast.root_node(), text_callback)
-            .next();
+            .map(|m| {
+                let node =
+                    |idx: u32| {
+                        m.captures
+                    .iter()
+                    .find_map(|cap| {
+                        if cap.index == idx {
+                            Some(cap.node)
+                        } else {
+                            None
+                        }
+                    })
+                    .expect("capture of index was not in the list of expected captures of query")
+                    };
+                let node_value = |idx: u32| text_callback(node(idx)).to_string();
 
-        if matches.is_none() {
-            return MatchResult::Unmatched;
-        }
+                let predicates: Vec<Box<dyn Predicate>> = query
+                    .general_predicates(m.pattern_index)
+                    .iter()
+                    .map(|query_pred| {
+                        let capture = capture_from(query_pred, node_value);
+                        let options = values_from(query_pred);
+                        return match query_pred.operator.as_ref() {
+                            "or?" => Box::new(Or {
+                                capture: capture.unwrap(),
+                                options,
+                            }),
+                            _ => Box::new(True {}) as Box<dyn Predicate>,
+                        };
+                    })
+                    .collect();
 
-        let m = matches.unwrap();
-        let node = |idx: u32| {
-            m.captures
-                .iter()
-                .find_map(|cap| {
-                    if cap.index == idx {
-                        Some(cap.node)
-                    } else {
-                        None
+                if predicates.iter().all(|func| func.check()) {
+                    let result = node(result_index as u32);
+                    MatchResult::Matched {
+                        node_info: NodeInfo {
+                            id: result.id(),
+                            byte_range: result.byte_range(),
+                        },
+                        decision: self.decision,
+                        title: self.title.clone(),
                     }
-                })
-                .expect("capture of index was not in the list of expected captures of query")
-        };
-        let node_value = |idx: u32| text_callback(node(idx)).to_string();
-
-        let funcs: Vec<Box<dyn Predicate>> = query
-            .general_predicates(m.pattern_index)
-            .iter()
-            .map(|query_pred| {
-                let capture = capture_from(query_pred, node_value);
-                let options = values_from(query_pred);
-                return match query_pred.operator.as_ref() {
-                    "or?" => Box::new(Or {
-                        capture: capture.unwrap(),
-                        options,
-                    }),
-                    _ => Box::new(True {}) as Box<dyn Predicate>,
-                };
+                } else {
+                    MatchResult::Unmatched
+                }
             })
-            .collect();
-
-        if funcs.iter().all(|func| func.check()) {
-            let result = node(result_index as u32);
-            MatchResult::Matched {
-                node_info: NodeInfo {
-                    id: result.id(),
-                    byte_range: result.byte_range(),
-                },
-                decision: self.decision,
-                title: self.title.clone(),
-            }
-        } else {
-            MatchResult::Unmatched
-        }
+            .collect()
     }
 }
 
@@ -429,5 +423,39 @@ mod tests {
             r#"((configuration (resource (resource_type) @1 (*) (block (attribute (identifier) @2 (*) ) ) ) @result )(#eq? @1 "\"aws_rds_instance\"") (#eq? @2 "size") )"#,
             buffer
         )
+    }
+
+    #[test]
+    fn matches_multiple_resources() {
+        let r = Rule {
+            title: "Example".into(),
+            code: r#"
+                    resource "aws_rds_instance" $(*) {
+                        size = $(*)
+                    }
+                    "#
+            .into(),
+            decision: Decision::Allow,
+        };
+
+        let terraform_text = r#"
+         resource "not_rds" $(*) {
+         }
+
+         resource "aws_rds_instance" "a" {
+             size = 12
+         }
+
+         resource "aws_rds_instance" "b" {
+             size = 44
+         }
+        "#;
+
+        let (tree, src) = terraform::parse(terraform_text);
+
+        let m = r.matches(&tree, &src);
+        dbg!(&m);
+
+        assert_eq!(2, m.len());
     }
 }

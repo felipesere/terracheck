@@ -1,4 +1,4 @@
-use tree_sitter::{Language, Parser, Query};
+use tree_sitter::{Language, Parser, Query, Tree};
 
 extern "C" {
     fn tree_sitter_terraform() -> Language;
@@ -16,6 +16,15 @@ pub fn parser() -> Parser {
         .expect("was not able to create the language");
 
     parser
+}
+
+// Considering a type for Tree+Text?
+pub fn parse(input: &str) -> (Tree, &str) {
+    let mut parser = parser();
+
+    let tree = parser.parse(&input, None).unwrap();
+
+    (tree, input)
 }
 
 include!(concat!(env!("OUT_DIR"), "/is_container.rs"));

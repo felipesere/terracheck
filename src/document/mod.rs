@@ -28,7 +28,7 @@ impl Document {
         let matches: Vec<_> = self
             .rules
             .iter()
-            .map(|r| r.matches(&terraform_ast, &content))
+            .flat_map(|r| r.matches(&terraform_ast, &content))
             .collect();
 
         matches.iter().any(|m| match m {
