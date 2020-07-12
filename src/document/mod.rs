@@ -1,3 +1,4 @@
+use crate::terraform;
 use pulldown_cmark::{
     Event::{Start, Text},
     Parser,
@@ -16,22 +17,19 @@ pub struct Document {
 }
 
 impl Document {
-    pub fn matches<R: Read>(&self, mut terraform: R) -> bool {
-        let mut parser = crate::terraform::parser();
+    pub fn matches<R: Read>(&self, mut source: R) -> bool {
         let mut content = String::new();
-        terraform
+
+        source
             .read_to_string(&mut content)
             .expect("unable to read terraform code");
-        let terraform_ast = parser.parse(&content, None).unwrap();
+        let backing_data = terraform::parse(&content);
 
-        // this will need to grow
-        let matches: Vec<_> = self
+        self
             .rules
             .iter()
-            .flat_map(|r| r.matches(&terraform_ast, &content))
-            .collect();
-
-        matches.iter().any(|m| match m {
+            .flat_map(|r| r.matches(&backing_data))
+            .any(|m| match m {
             MatchResult::Matched {
                 decision: Decision::Allow,
                 node_info: _,

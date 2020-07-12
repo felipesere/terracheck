@@ -4,7 +4,8 @@ use core::ops::Range;
 use regex::Regex;
 use std::fmt::{self, write, Write};
 use std::iter::successors;
-use tree_sitter::{Node, QueryCursor, QueryPredicate, QueryPredicateArg, Tree};
+use terraform::BackingData;
+use tree_sitter::{Node, QueryCursor, QueryPredicate, QueryPredicateArg};
 
 lazy_static! {
     static ref RE: Regex = Regex::new(r#"\$\((?P<operation>[^)]+)\)"#).unwrap();
@@ -48,7 +49,7 @@ impl Rule {
         }
     }
 
-    pub(crate) fn matches(&self, terraform_ast: &Tree, text: &str) -> Vec<MatchResult> {
+    pub(crate) fn matches(&self, terraform: &BackingData) -> Vec<MatchResult> {
         let mut cursor = QueryCursor::new();
         let mut output = String::new();
         self.to_sexp(&mut output)
@@ -61,10 +62,8 @@ impl Rule {
             .position(|cap| cap == "result")
             .expect("there was no '@result' match in query") as u32;
 
-        let text_callback = |n: Node| &text[n.byte_range()];
-
         cursor
-            .matches(&query, terraform_ast.root_node(), text_callback)
+            .matches(&query, terraform.root(), |n: Node| terraform.text(n))
             .map(|m| {
                 let node =
                     |idx: u32| {
@@ -79,25 +78,15 @@ impl Rule {
                     })
                     .expect("capture of index was not in the list of expected captures of query")
                     };
-                let node_value = |idx: u32| text_callback(node(idx)).to_string();
+                let node_value = |idx: u32| terraform.text(node(idx)).to_string();
 
-                let predicates: Vec<Box<dyn Predicate>> = query
+                let all_predicates_match = query
                     .general_predicates(m.pattern_index)
                     .iter()
-                    .map(|query_pred| {
-                        let capture = capture_from(query_pred, node_value);
-                        let options = values_from(query_pred);
-                        return match query_pred.operator.as_ref() {
-                            "or?" => Box::new(Or {
-                                capture: capture.unwrap(),
-                                options,
-                            }),
-                            _ => Box::new(True {}) as Box<dyn Predicate>,
-                        };
-                    })
-                    .collect();
+                    .map(|query_pred| query_to_pred(query_pred, node_value))
+                    .all(|p| p.check());
 
-                if predicates.iter().all(|func| func.check()) {
+                if all_predicates_match {
                     let result = node(result_index as u32);
                     MatchResult::Matched {
                         node_info: NodeInfo {
@@ -112,6 +101,21 @@ impl Rule {
                 }
             })
             .collect()
+    }
+}
+
+fn query_to_pred<F: Fn(u32) -> String>(
+    query_pred: &QueryPredicate,
+    node_value: F,
+) -> Box<dyn Predicate> {
+    let capture = capture_from(query_pred, node_value);
+    let options = values_from(query_pred);
+    match query_pred.operator.as_ref() {
+        "or?" => Box::new(Or {
+            capture: capture.unwrap(),
+            options,
+        }),
+        _ => Box::new(True {}) as Box<dyn Predicate>,
     }
 }
 
@@ -194,7 +198,7 @@ impl ToSexp for Vec<Query> {
     }
 }
 
-// Coudl this just be values.join(" ")?
+/// We need the quotes around thins, as they matter to the matching of tree-sitter
 fn join(values: &[String]) -> String {
     values
         .iter()
@@ -451,10 +455,9 @@ mod tests {
          }
         "#;
 
-        let (tree, src) = terraform::parse(terraform_text);
+        let backing_data = terraform::parse(terraform_text);
 
-        let m = r.matches(&tree, &src);
-        dbg!(&m);
+        let m = r.matches(&backing_data);
 
         assert_eq!(2, m.len());
     }

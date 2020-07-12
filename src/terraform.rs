@@ -1,4 +1,4 @@
-use tree_sitter::{Language, Parser, Query, Tree};
+use tree_sitter::{Language, Node, Parser, Query, Tree};
 
 extern "C" {
     fn tree_sitter_terraform() -> Language;
@@ -18,13 +18,28 @@ pub fn parser() -> Parser {
     parser
 }
 
+pub(crate) struct BackingData<'a> {
+    tree: Tree,
+    input: &'a str,
+}
+
+impl<'a> BackingData<'a> {
+    pub fn text(&self, n: Node) -> &str {
+        &self.input[n.byte_range()]
+    }
+
+    pub fn root(&self) -> Node {
+        self.tree.root_node()
+    }
+}
+
 // Considering a type for Tree+Text?
-pub fn parse(input: &str) -> (Tree, &str) {
+pub(crate) fn parse(input: &str) -> BackingData {
     let mut parser = parser();
 
     let tree = parser.parse(&input, None).unwrap();
 
-    (tree, input)
+    BackingData { tree, input }
 }
 
 include!(concat!(env!("OUT_DIR"), "/is_container.rs"));
