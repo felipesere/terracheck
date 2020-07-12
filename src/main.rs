@@ -1,12 +1,11 @@
 #![allow(dead_code)]
 
 use argh::FromArgs;
-use check::Check;
-use show::Show;
+use commands::Check;
+use commands::Show;
 
-mod check;
+mod commands;
 mod document;
-mod show;
 mod terraform;
 
 #[macro_use]
