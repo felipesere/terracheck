@@ -6,6 +6,7 @@ use commands::Show;
 
 mod commands;
 mod document;
+mod report;
 mod terraform;
 
 #[macro_use]
@@ -39,6 +40,7 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::document::rule::{Decision, MatchResult};
 
     #[test]
     fn matches_the_rds() {
@@ -103,6 +105,13 @@ resource "aws_rds_instance" $(*) {
     fn matches(tf: &str, doc_source: &str) -> bool {
         let doc = document::from_reader(doc_source.as_bytes()).expect("unable to create document");
 
-        doc.matches(tf.as_bytes())
+        doc.matches(tf.as_bytes()).iter().any(|m| match m {
+            MatchResult::Matched {
+                decision: Decision::Allow,
+                node_info: _,
+                title: _,
+            } => true,
+            _ => false,
+        })
     }
 }

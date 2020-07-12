@@ -8,7 +8,9 @@ use rule::{Decision, MatchResult, Rule};
 use std::io::Read;
 
 mod ast;
-mod rule;
+// TODO: this needs a better home or some of the types need to be moved out so they are more
+// broadly accessible
+pub mod rule;
 
 #[derive(Debug)]
 pub struct Document {
@@ -17,7 +19,7 @@ pub struct Document {
 }
 
 impl Document {
-    pub fn matches<R: Read>(&self, mut source: R) -> bool {
+    pub fn matches<R: Read>(&self, mut source: R) -> Vec<MatchResult> {
         let mut content = String::new();
 
         source
@@ -29,14 +31,7 @@ impl Document {
             .rules
             .iter()
             .flat_map(|r| r.matches(&backing_data))
-            .any(|m| match m {
-            MatchResult::Matched {
-                decision: Decision::Allow,
-                node_info: _,
-                title: _,
-            } => true,
-            _ => false,
-        })
+            .collect()
     }
 }
 
