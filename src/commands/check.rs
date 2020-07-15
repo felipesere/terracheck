@@ -3,10 +3,10 @@ use glob::glob;
 use std::fs::read_to_string;
 use std::fs::File;
 use std::path::PathBuf;
-use std::io::Write;
 
-use crate::Run;
 use crate::report::Report;
+use crate::terraform;
+use crate::Run;
 
 #[derive(FromArgs)]
 /// Verifies if any terraform resource matches the rule in the markdown file
@@ -27,9 +27,10 @@ impl Run for Check {
             match entry {
                 Ok(path) => {
                     let terraform_content = read_to_string(&path).unwrap();
+                    let tf = terraform::parse(&terraform_content);
 
-                    report.about(&path, doc.matches(terraform_content.as_bytes()));
-                },
+                    report.about(&path, &tf, doc.matches(&tf));
+                }
                 err => println!("error: {:?}", err),
             }
         }

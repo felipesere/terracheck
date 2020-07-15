@@ -18,21 +18,19 @@ pub enum Decision {
     Deny,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct NodeInfo {
-    id: usize,
-    byte_range: Range<usize>,
+    pub id: usize,
+    pub byte_range: Range<usize>,
 }
 
-#[derive(Debug)]
-pub enum MatchResult {
-    Matched {
-        node_info: NodeInfo,
-        decision: Decision,
-        title: String,
-    },
-    Unmatched,
+#[derive(Debug, Clone)]
+pub struct MatchResult {
+    pub node_info: NodeInfo,
+    pub decision: Decision,
+    pub title: String,
 }
+
 #[derive(Debug)]
 pub struct Rule {
     pub title: String,
@@ -64,7 +62,7 @@ impl Rule {
 
         cursor
             .matches(&query, terraform.root(), |n: Node| terraform.text(n))
-            .map(|m| {
+            .filter_map(|m| {
                 let node =
                     |idx: u32| {
                         m.captures
@@ -88,17 +86,16 @@ impl Rule {
 
                 if all_predicates_match {
                     let result = node(result_index as u32);
-                    MatchResult::Matched {
+                    return Some(MatchResult {
                         node_info: NodeInfo {
                             id: result.id(),
                             byte_range: result.byte_range(),
                         },
                         decision: self.decision,
                         title: self.title.clone(),
-                    }
-                } else {
-                    MatchResult::Unmatched
+                    });
                 }
+                None
             })
             .collect()
     }

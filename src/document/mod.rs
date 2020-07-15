@@ -1,4 +1,4 @@
-use crate::terraform;
+use crate::terraform::BackingData;
 use pulldown_cmark::{
     Event::{Start, Text},
     Parser,
@@ -19,18 +19,10 @@ pub struct Document {
 }
 
 impl Document {
-    pub fn matches<R: Read>(&self, mut source: R) -> Vec<MatchResult> {
-        let mut content = String::new();
-
-        source
-            .read_to_string(&mut content)
-            .expect("unable to read terraform code");
-        let backing_data = terraform::parse(&content);
-
-        self
-            .rules
+    pub fn matches(&self, terraform: &BackingData) -> Vec<MatchResult> {
+        self.rules
             .iter()
-            .flat_map(|r| r.matches(&backing_data))
+            .flat_map(|r| r.matches(terraform))
             .collect()
     }
 }

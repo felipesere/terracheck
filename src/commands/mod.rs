@@ -1,5 +1,5 @@
-mod show;
 mod check;
+mod show;
 
-pub use show::Show;
 pub use check::Check;
+pub use show::Show;

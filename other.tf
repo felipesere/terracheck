@@ -3,5 +3,6 @@ resource "aws_ami" "pc" {
 }
 
 resource "aws_rds_instance" "not-my-db" {
-  num = 14
+  size = "t2.large"
+  num  = 14
 }

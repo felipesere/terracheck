@@ -3,6 +3,6 @@ resource "aws_rds_instance" "my-db" {
   num  = 12
 }
 
-resource "aws_rds_instance" "my-db" {
+resource "aws_rds_instance" "meh-db" {
   num = 12
 }

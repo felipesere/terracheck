@@ -6,7 +6,7 @@ Some fancy reason why this matters
 
 ```terraform
 resource "aws_rds_instance" $(*) {
-  num = $(*)
+  size = $(*)
 }
 ```
 

@@ -1,3 +1,4 @@
+use std::ops::Range;
 use tree_sitter::{Language, Node, Parser, Query, Tree};
 
 extern "C" {
@@ -18,14 +19,18 @@ pub fn parser() -> Parser {
     parser
 }
 
-pub(crate) struct BackingData<'a> {
+pub struct BackingData<'a> {
     tree: Tree,
     input: &'a str,
 }
 
 impl<'a> BackingData<'a> {
+    pub fn text_range(&self, range: &Range<usize>) -> &str {
+        &self.input[range.clone()]
+    }
+
     pub fn text(&self, n: Node) -> &str {
-        &self.input[n.byte_range()]
+        self.text_range(&n.byte_range())
     }
 
     pub fn root(&self) -> Node {
