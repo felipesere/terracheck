@@ -35,38 +35,38 @@ pub struct MatchResult {
 pub struct Rule {
     pub title: String,
     pub decision: Decision,
-    code: String,
     result_index: u32,
     query: tree_sitter::Query,
 }
 
 impl Rule {
-    pub(crate) fn new(title: String, decision: Decision, code: String) -> Result<Self, String> {
-
+    fn to_sexp(code: String, output: &mut dyn Write) -> fmt::Result {
         let mut parser = terraform::parser();
+
         let tree = parser.parse(&code, None).unwrap();
+
         let (nodes, queries) = ast(tree.root_node(), code.as_str(), &mut Reference::new());
 
+        write!(output, "(")?;
+        nodes.unwrap().to_sexp(output)?;
+        queries.to_sexp(output)?;
+        write!(output, ")")
+    }
+
+    pub(crate) fn new(title: String, decision: Decision, code: String) -> Result<Self, String> {
         let mut rule_as_sexp = String::new();
-        write!(rule_as_sexp, "(").unwrap();
-        nodes.unwrap().to_sexp(&mut rule_as_sexp).unwrap();
-        queries.to_sexp(&mut rule_as_sexp).unwrap();
-        write!(rule_as_sexp, ")").unwrap();
+        Rule::to_sexp(code, &mut rule_as_sexp).unwrap();
         let query = terraform::query(&rule_as_sexp);
 
         match query.capture_names().iter().position(|cap| cap == "result") {
-            Some(idx) => {
-                Ok(Rule {
-                    code,
-                    title,
-                    decision,
-                    result_index: idx as u32,
-                    query,
-                })
-            }
+            Some(idx) => Ok(Rule {
+                title,
+                decision,
+                result_index: idx as u32,
+                query,
+            }),
             None => Err("There was no @result node found".into()),
         }
-
     }
 
     pub(crate) fn matches(&self, terraform: &BackingData) -> Vec<MatchResult> {
@@ -90,7 +90,8 @@ impl Rule {
                     };
                 let node_value = |idx: u32| terraform.text(node(idx)).to_string();
 
-                let all_predicates_match = self.query
+                let all_predicates_match = self
+                    .query
                     .general_predicates(m.pattern_index)
                     .iter()
                     .all(|query_pred| query_to_pred(query_pred, node_value).check());
@@ -151,21 +152,6 @@ fn values_from(predicate: &QueryPredicate) -> Vec<String> {
     }
 
     values
-}
-
-impl ToSexp for Rule {
-    fn to_sexp(&self, output: &mut dyn Write) -> fmt::Result {
-        let mut parser = terraform::parser();
-
-        let tree = parser.parse(&self.code, None).unwrap();
-
-        let (nodes, queries) = ast(tree.root_node(), self.code.as_str(), &mut Reference::new());
-
-        write!(output, "(")?;
-        nodes.unwrap().to_sexp(output)?;
-        queries.to_sexp(output)?;
-        write!(output, ")")
-    }
 }
 
 trait Predicate: std::fmt::Debug {
@@ -417,18 +403,15 @@ mod tests {
 
     #[test]
     fn turns_a_rule_into_s_expression() {
-        let r = Rule::new(
-            "Example".into(),
-            Decision::Allow,
-            r#"
+        let code = r#"
               resource "aws_rds_instance" $(*) {
                  size = $(*)
               }
-            "#.into(),
-        ).unwrap();
+            "#
+        .into();
 
         let mut buffer = String::new();
-        r.to_sexp(&mut buffer).unwrap();
+        Rule::to_sexp(code, &mut buffer).unwrap();
 
         assert_eq!(
             r#"((configuration (resource (resource_type) @1 (*) (block (attribute (identifier) @2 (*) ) ) ) @result )(#eq? @1 "\"aws_rds_instance\"") (#eq? @2 "size") )"#,
@@ -445,8 +428,10 @@ mod tests {
             resource "aws_rds_instance" $(*) {
               size = $(*)
             }
-            "#.into(),
-        ).unwrap();
+            "#
+            .into(),
+        )
+        .unwrap();
 
         let terraform_text = r#"
          resource "not_rds" $(*) {
