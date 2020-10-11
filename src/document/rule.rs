@@ -34,34 +34,46 @@ pub struct MatchResult {
 #[derive(Debug)]
 pub struct Rule {
     pub title: String,
-    pub code: String,
     pub decision: Decision,
+    code: String,
+    result_index: u32,
+    query: tree_sitter::Query,
 }
 
 impl Rule {
-    pub(crate) fn empty() -> Self {
-        Rule {
-            title: "".into(),
-            code: "".into(),
-            decision: Decision::Deny,
+    pub(crate) fn new(title: String, decision: Decision, code: String) -> Result<Self, String> {
+
+        let mut parser = terraform::parser();
+        let tree = parser.parse(&code, None).unwrap();
+        let (nodes, queries) = ast(tree.root_node(), code.as_str(), &mut Reference::new());
+
+        let mut rule_as_sexp = String::new();
+        write!(rule_as_sexp, "(").unwrap();
+        nodes.unwrap().to_sexp(&mut rule_as_sexp).unwrap();
+        queries.to_sexp(&mut rule_as_sexp).unwrap();
+        write!(rule_as_sexp, ")").unwrap();
+        let query = terraform::query(&rule_as_sexp);
+
+        match query.capture_names().iter().position(|cap| cap == "result") {
+            Some(idx) => {
+                Ok(Rule {
+                    code,
+                    title,
+                    decision,
+                    result_index: idx as u32,
+                    query,
+                })
+            }
+            None => Err("There was no @result node found".into()),
         }
+
     }
 
     pub(crate) fn matches(&self, terraform: &BackingData) -> Vec<MatchResult> {
         let mut cursor = QueryCursor::new();
-        let mut output = String::new();
-        self.to_sexp(&mut output)
-            .expect("unable to turn rule into s-exp");
-        let query = terraform::query(&output);
-
-        let result_index = query
-            .capture_names()
-            .iter()
-            .position(|cap| cap == "result")
-            .expect("there was no '@result' match in query") as u32;
 
         cursor
-            .matches(&query, terraform.root(), |n: Node| terraform.text(n))
+            .matches(&self.query, terraform.root(), |n: Node| terraform.text(n))
             .filter_map(|m| {
                 let node =
                     |idx: u32| {
@@ -78,14 +90,13 @@ impl Rule {
                     };
                 let node_value = |idx: u32| terraform.text(node(idx)).to_string();
 
-                let all_predicates_match = query
+                let all_predicates_match = self.query
                     .general_predicates(m.pattern_index)
                     .iter()
-                    .map(|query_pred| query_to_pred(query_pred, node_value))
-                    .all(|p| p.check());
+                    .all(|query_pred| query_to_pred(query_pred, node_value).check());
 
                 if all_predicates_match {
-                    let result = node(result_index as u32);
+                    let result = node(self.result_index as u32);
                     return Some(MatchResult {
                         node_info: NodeInfo {
                             id: result.id(),
@@ -406,16 +417,15 @@ mod tests {
 
     #[test]
     fn turns_a_rule_into_s_expression() {
-        let r = Rule {
-            title: "Example".into(),
-            code: r#"
-                    resource "aws_rds_instance" $(*) {
-                        size = $(*)
-                    }
-                    "#
-            .into(),
-            decision: Decision::Allow,
-        };
+        let r = Rule::new(
+            "Example".into(),
+            Decision::Allow,
+            r#"
+              resource "aws_rds_instance" $(*) {
+                 size = $(*)
+              }
+            "#.into(),
+        ).unwrap();
 
         let mut buffer = String::new();
         r.to_sexp(&mut buffer).unwrap();
@@ -428,16 +438,15 @@ mod tests {
 
     #[test]
     fn matches_multiple_resources() {
-        let r = Rule {
-            title: "Example".into(),
-            code: r#"
-                    resource "aws_rds_instance" $(*) {
-                        size = $(*)
-                    }
-                    "#
-            .into(),
-            decision: Decision::Allow,
-        };
+        let r = Rule::new(
+            "Example".into(),
+            Decision::Allow,
+            r#"
+            resource "aws_rds_instance" $(*) {
+              size = $(*)
+            }
+            "#.into(),
+        ).unwrap();
 
         let terraform_text = r#"
          resource "not_rds" $(*) {

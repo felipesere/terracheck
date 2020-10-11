@@ -42,7 +42,7 @@ pub fn from_reader<R: Read>(mut input: R) -> Option<Document> {
         rules: Vec::new(),
     };
 
-    let mut current_rule = Rule::empty();
+    let mut current_rule = None;
 
     while let Some(event) = parser.next() {
         match event {
@@ -51,17 +51,22 @@ pub fn from_reader<R: Read>(mut input: R) -> Option<Document> {
             }
             Start(Heading(2)) => {
                 let title = consume_text(&mut parser).expect("there should have been title text");
-                if title.starts_with("Allow") {
-                    current_rule.decision = Decision::Allow;
-                }
-                current_rule.title = title
+
+                let decision = if title.starts_with("Allow") {
+                    Decision::Allow
+                } else {
+                    Decision::Deny
+                };
+                current_rule = Some((title, decision));
             }
             Start(CodeBlock(_)) => {
-                current_rule.code = consume_text(&mut parser).expect("there was no code");
+                if let Some((title, decision)) = current_rule {
+                    let code = consume_text(&mut parser).expect("there was no code");
+                    let rule= Rule::new(title, decision, code).expect("TODO");
+                    doc.rules.push(rule);
+                }
 
-                doc.rules.push(current_rule);
-
-                current_rule = Rule::empty();
+                current_rule = None
             }
             _ => {}
         }
