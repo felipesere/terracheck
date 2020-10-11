@@ -45,7 +45,7 @@ impl Rule {
 
         let tree = parser.parse(&code, None).unwrap();
 
-        let (nodes, queries) = ast(tree.root_node(), code.as_str(), &mut Reference::new());
+        let (nodes, queries) = ast(tree.root_node(), code.as_str(), &mut UniqueReferences::new());
 
         write!(output, "(")?;
         nodes.unwrap().to_sexp(output)?;
@@ -74,10 +74,10 @@ impl Rule {
 
         cursor
             .matches(&self.query, terraform.root(), |n: Node| terraform.text(n))
-            .filter_map(|m| {
+            .filter_map(|structural_match| {
                 let node =
                     |idx: u32| {
-                        m.captures
+                        structural_match.captures
                     .iter()
                     .find_map(|cap| {
                         if cap.index == idx {
@@ -92,22 +92,22 @@ impl Rule {
 
                 let all_predicates_match = self
                     .query
-                    .general_predicates(m.pattern_index)
+                    .general_predicates(structural_match.pattern_index)
                     .iter()
                     .all(|query_pred| query_to_pred(query_pred, node_value).check());
 
-                if all_predicates_match {
-                    let result = node(self.result_index as u32);
-                    return Some(MatchResult {
-                        node_info: NodeInfo {
-                            id: result.id(),
-                            byte_range: result.byte_range(),
-                        },
-                        decision: self.decision,
-                        title: self.title.clone(),
-                    });
+                if !all_predicates_match {
+                    return None
                 }
-                None
+                let result = node(self.result_index as u32);
+                Some(MatchResult {
+                    node_info: NodeInfo {
+                        id: result.id(),
+                        byte_range: result.byte_range(),
+                    },
+                    decision: self.decision,
+                    title: self.title.clone(),
+                })
             })
             .collect()
     }
@@ -256,13 +256,13 @@ enum Query {
     },
 }
 
-pub struct Reference {
+pub struct UniqueReferences {
     chars: Box<dyn Iterator<Item = String>>,
 }
 
-impl Reference {
+impl UniqueReferences {
     fn new() -> Self {
-        Reference {
+        UniqueReferences {
             chars: Box::new(successors(Some(1), |n| Some(n + 1)).map(|n| n.to_string())),
         }
     }
@@ -316,7 +316,7 @@ fn kind<'a>(node: &'a Node, source: &str) -> NodeKind<'a> {
     }
 }
 
-fn ast(node: Node, source: &str, generator: &mut Reference) -> (Option<AST>, Vec<Query>) {
+fn ast(node: Node, source: &str, generator: &mut UniqueReferences) -> (Option<AST>, Vec<Query>) {
     match kind(&node, source) {
         NodeKind::Unnamed => (None, Vec::new()),
         NodeKind::Query { value } => prcoess_query(value, generator),
@@ -356,7 +356,7 @@ fn ast(node: Node, source: &str, generator: &mut Reference) -> (Option<AST>, Vec
     }
 }
 
-fn prcoess_query(value: String, generator: &mut Reference) -> (Option<AST>, Vec<Query>) {
+fn prcoess_query(value: String, generator: &mut UniqueReferences) -> (Option<AST>, Vec<Query>) {
     let caps = RE.captures(&value).unwrap();
 
     let operation: String = caps["operation"].trim().to_string();
@@ -365,6 +365,7 @@ fn prcoess_query(value: String, generator: &mut Reference) -> (Option<AST>, Vec<
     }
 
     let reference = generator.next();
+
     // This will need extracting into its own module with a small parser for operations
     if operation.contains("||") {
         let caps = Regex::new("(?P<left>[^ ]+) \\|\\| (?P<right>.+)")
