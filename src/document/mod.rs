@@ -62,7 +62,7 @@ pub fn from_reader<R: Read>(mut input: R) -> Option<Document> {
             Start(CodeBlock(_)) => {
                 if let Some((title, decision)) = current_rule {
                     let code = consume_text(&mut parser).expect("there was no code");
-                    let rule= Rule::new(title, decision, code).expect("TODO");
+                    let rule= Rule::new(title, decision, code).expect("TODO: if this fail I should collect the error and report it later?");
                     doc.rules.push(rule);
                 }
 

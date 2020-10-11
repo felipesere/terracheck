@@ -55,7 +55,7 @@ impl Rule {
 
     pub(crate) fn new(title: String, decision: Decision, code: String) -> Result<Self, String> {
         let mut rule_as_sexp = String::new();
-        Rule::to_sexp(code, &mut rule_as_sexp).unwrap();
+        Rule::to_sexp(code, &mut rule_as_sexp).expect("TODO: this should be in infallable? I'm writing to a string...");
         let query = terraform::query(&rule_as_sexp);
 
         match query.capture_names().iter().position(|cap| cap == "result") {
