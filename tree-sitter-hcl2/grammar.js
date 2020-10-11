@@ -157,7 +157,9 @@ const grammarObject = {
 
     map: $ => seq("{", maybeCommaSep($.keyValue), "}"),
 
-    keyValue: $ => seq($._stringLike, "=", $._expression),
+    value_or_query: $ => choice($._expression, $.query),
+
+    keyValue: $ => seq($._stringLike, "=", $.value_or_query),
 
     _stringLike: $ => choice($.identifier, $.string_literal),
 

@@ -32,7 +32,7 @@ Any set of characters query delimiter
 ===
 
 resource "something" $(*) {
-  foo = $("a" | "b")
+  foo = $("a" || "b")
 }
 
 ---
@@ -40,3 +40,21 @@ resource "something" $(*) {
 (configuration
   (resource (resource_type) (query) (block
     (attribute (identifier) (query)))))
+
+===
+A map with a query
+===
+
+resource "something" $(*) {
+  foo = {
+    bar = $("a" || "b")
+  }
+}
+
+---
+
+(configuration
+  (resource (resource_type) (query) (block
+    (attribute (identifier) (map
+      (keyValue (identifier) (query))
+      )))))
