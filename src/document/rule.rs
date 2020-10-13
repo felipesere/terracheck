@@ -45,7 +45,11 @@ impl Rule {
 
         let tree = parser.parse(&code, None).unwrap();
 
-        let (nodes, queries) = ast(tree.root_node(), code.as_str(), &mut UniqueReferences::new());
+        let (nodes, queries) = ast(
+            tree.root_node(),
+            code.as_str(),
+            &mut UniqueReferences::new(),
+        );
 
         write!(output, "(")?;
         nodes.unwrap().to_sexp(output)?;
@@ -55,7 +59,8 @@ impl Rule {
 
     pub(crate) fn new(title: String, decision: Decision, code: String) -> Result<Self, String> {
         let mut rule_as_sexp = String::new();
-        Rule::to_sexp(code, &mut rule_as_sexp).expect("TODO: this should be in infallable? I'm writing to a string...");
+        Rule::to_sexp(code, &mut rule_as_sexp)
+            .expect("TODO: this should be in infallable? I'm writing to a string...");
         let query = terraform::query(&rule_as_sexp);
 
         match query.capture_names().iter().position(|cap| cap == "result") {
@@ -97,7 +102,7 @@ impl Rule {
                     .all(|query_pred| query_to_pred(query_pred, node_value).check());
 
                 if !all_predicates_match {
-                    return None
+                    return None;
                 }
                 let result = node(self.result_index as u32);
                 Some(MatchResult {

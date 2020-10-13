@@ -4,10 +4,10 @@ use std::fs::read_to_string;
 use std::fs::File;
 use std::path::PathBuf;
 
+use crate::document;
 use crate::report::Report;
 use crate::terraform;
 use crate::Run;
-use crate::document;
 
 #[derive(FromArgs)]
 /// Verifies if any terraform resource matches the rule in the markdown file

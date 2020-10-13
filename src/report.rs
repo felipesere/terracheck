@@ -19,7 +19,7 @@ impl<W: Write> Report<W> {
     // TODO: this needs enxtending and improving.
     // There can be
     // * multiple matches for the same resource, but different rules (1 doc == n rules!)
-    // * multiple resources within a `path` (or file) mmight have matched
+    // * multiple resources within a `path` (or file) might have matched
     // * if I want to weigh `Accept` vs `Deny`, they need to match resource (which is node_info.id) and rule (which is title)
     pub fn about(&mut self, path: &Path, terraform: &BackingData, match_results: Vec<MatchResult>) {
         if match_results.is_empty() || match_results.iter().all(|m| m.decision == Decision::Allow) {
@@ -33,7 +33,7 @@ impl<W: Write> Report<W> {
         for m in match_results {
             let resources = results_for_node.entry(m.node_info.id).or_insert(Vec::new());
 
-            resources.push(m.clone()); // TODO fix this clone someho
+            resources.push(m.clone()); // TODO fix this clone somehow
         }
 
         for (_, ms) in results_for_node {
