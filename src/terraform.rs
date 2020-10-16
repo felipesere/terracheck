@@ -19,6 +19,7 @@ pub fn parser() -> Parser {
     parser
 }
 
+#[derive(Debug, Clone)]
 pub struct BackingData<'a> {
     tree: Tree,
     input: &'a str,
