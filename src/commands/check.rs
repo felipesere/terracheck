@@ -21,16 +21,16 @@ impl Run for Check {
     fn run(self) {
         let file = File::open(self.path).expect("could not open rule file");
 
-        let doc = document::from_reader(&file).expect("was not able to parse markdown");
+        let rule = document::from_reader(&file).expect("was not able to parse markdown");
         let mut report = Report::to(std::io::stdout());
 
         for entry in glob("**/*.tf").expect("Failed to read glob pattern") {
             match entry {
-                Ok(rule_file) => {
-                    let terraform_content = read_to_string(&rule_file).unwrap();
+                Ok(file_to_check) => {
+                    let terraform_content = read_to_string(&file_to_check).unwrap();
                     let tf = terraform::parse(&terraform_content);
 
-                    report.about(&rule_file, &tf, doc.matches(&tf));
+                    report.about(&file_to_check, &tf, rule.matches(&tf));
                 }
                 err => println!("error: {:?}", err),
             }
