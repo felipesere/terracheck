@@ -1,6 +1,5 @@
 use argh::FromArgs;
 use glob::glob;
-use std::fs::read_to_string;
 use std::fs::File;
 use std::path::PathBuf;
 
@@ -8,6 +7,7 @@ use crate::document;
 use crate::report::Report;
 use crate::terraform;
 use crate::Run;
+use crate::terraform::BackingData;
 
 #[derive(FromArgs)]
 /// Verifies if any terraform resource matches the rule in the markdown file
@@ -33,18 +33,15 @@ impl Run for Check {
             vec![self.path]
         };
 
-        let tf_files_to_check = paths_in("**/*.tf");
+        let tf_files_to_check: Vec<BackingData> = paths_in("**/*.tf").into_iter().map(terraform::parse).collect();
 
         for path in files {
             let file = File::open(path).expect("could not open rule file");
             let rule = document::from_reader(&file).expect("was not able to parse markdown");
             let mut report = Report::to(std::io::stdout());
 
-            for file_to_check in tf_files_to_check.iter() {
-                let terraform_content = read_to_string(&file_to_check).unwrap();
-                let tf = terraform::parse(&terraform_content);
-
-                report.about(&file_to_check, &tf, rule.matches(&tf));
+            for backing_data in tf_files_to_check.iter() {
+                report.about(backing_data, rule.matches(&backing_data));
             }
         }
     }

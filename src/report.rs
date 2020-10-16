@@ -2,7 +2,6 @@ use serde::Serialize;
 use crate::terraform::BackingData;
 use std::collections::HashMap;
 use std::io::Write;
-use std::path::Path;
 use tinytemplate::{format_unescaped, TinyTemplate};
 
 use crate::document::rule::{Decision, MatchResult};
@@ -44,10 +43,10 @@ impl<'a, W: Write> Report<'a, W> {
     }
 
     // This needs to a single call, not a giant loop...
-    pub fn about(&mut self, path: &Path, terraform: &BackingData, match_results: Vec<MatchResult>) {
+    pub fn about(&mut self, terraform: &BackingData, match_results: Vec<MatchResult>) {
         let mut context = Context::default();
         if match_results.is_empty() {
-            context.success.push(path.to_string_lossy().into());
+            context.success.push(terraform.path.clone());
         }
 
         let mut results_for_node: HashMap<NodeId, Vec<MatchResult>> = HashMap::new();
@@ -63,11 +62,11 @@ impl<'a, W: Write> Report<'a, W> {
                 let dennial = results.iter().find(|m| m.decision == Decision::Deny).unwrap();
 
                 context.failures.push(Failure {
-                    file: path.to_string_lossy().into(),
+                    file: terraform.path.clone(),
                     code: terraform.text_range(&dennial.node_info.byte_range).to_string(),
                 });
             } else {
-                context.success.push(path.to_string_lossy().into());
+                context.success.push(terraform.path.clone())
             }
         }
         let rendered = self.template.render("success_and_failure", &context).unwrap();

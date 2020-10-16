@@ -1,3 +1,5 @@
+use std::fs::read_to_string;
+use std::path::PathBuf;
 use std::ops::Range;
 use tree_sitter::{Language, Node, Parser, Query, Tree};
 
@@ -19,13 +21,15 @@ pub fn parser() -> Parser {
     parser
 }
 
+// Surely this can be better than string?
 #[derive(Debug, Clone)]
-pub struct BackingData<'a> {
+pub struct BackingData {
     tree: Tree,
-    input: &'a str,
+    pub input: String,
+    pub path: String,
 }
 
-impl<'a> BackingData<'a> {
+impl BackingData {
     pub fn text_range(&self, range: &Range<usize>) -> &str {
         &self.input[range.clone()]
     }
@@ -39,13 +43,14 @@ impl<'a> BackingData<'a> {
     }
 }
 
-// Considering a type for Tree+Text?
-pub(crate) fn parse(input: &str) -> BackingData {
+pub(crate) fn parse(path: PathBuf) -> BackingData {
+    let input = read_to_string(&path).unwrap();
     let mut parser = parser();
 
     let tree = parser.parse(&input, None).unwrap();
+    let path = path.to_string_lossy().into();
 
-    BackingData { tree, input }
+    BackingData { tree, input, path }
 }
 
 include!(concat!(env!("OUT_DIR"), "/is_container.rs"));
