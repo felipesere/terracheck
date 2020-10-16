@@ -6,7 +6,9 @@ Some fancy reason why this matters
 
 ```terraform
 resource "aws_rds_instance" $(*) {
-  size = $(*)
+  tags = {
+    "family" = $("gladis" || "not-gladis")
+  }
 }
 ```
 
