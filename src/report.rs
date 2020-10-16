@@ -75,6 +75,6 @@ impl<W: Write> Report<W> {
         }
 
         let rendered = template.render("hello", &context).unwrap();
-        print!("{}", rendered);
+        write!(self.output, "{}", rendered).expect("TODO: should we lift this?");
     }
 }
