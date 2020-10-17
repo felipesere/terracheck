@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use std::io::Write;
 use tinytemplate::{format_unescaped, TinyTemplate};
 
-use crate::document::rule::{Decision, MatchResult};
+use document::rule::{Decision, MatchResult};
 
 static TEMPLATE : &'static str = r#"{{ for value in success }}
 {value} ... ✅

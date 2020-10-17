@@ -98,6 +98,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "524cbf6897b527295dff137cec09ecf3a05f4fddffd7dfcd1585403449e74198"
 
 [[package]]
+name = "document"
+version = "0.0.1"
+dependencies = [
+ "lazy_static",
+ "pretty_assertions",
+ "pulldown-cmark",
+ "regex",
+ "terraform",
+ "tree-sitter",
+]
+
+[[package]]
 name = "getopts"
 version = "0.2.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -276,18 +288,14 @@ name = "terracheck"
 version = "0.1.0"
 dependencies = [
  "argh",
- "cc",
  "colored",
+ "document",
  "glob",
- "lazy_static",
  "pretty_assertions",
- "pulldown-cmark",
- "regex",
  "serde",
  "serde_json",
  "terraform",
  "tinytemplate",
- "tree-sitter",
 ]
 
 [[package]]
@@ -295,6 +303,7 @@ name = "terraform"
 version = "0.0.1"
 dependencies = [
  "cc",
+ "pretty_assertions",
  "serde",
  "serde_json",
  "tree-sitter",

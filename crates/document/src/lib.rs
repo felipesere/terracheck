@@ -7,9 +7,10 @@ use pulldown_cmark::{
 use rule::{Decision, MatchResult, Rule};
 use std::io::Read;
 
+#[macro_use]
+extern crate lazy_static;
+
 mod ast;
-// TODO: this needs a better home or some of the types need to be moved out so they are more
-// broadly accessible
 pub mod rule;
 
 #[derive(Debug)]

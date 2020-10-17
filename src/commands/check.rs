@@ -3,7 +3,7 @@ use glob::glob;
 use std::fs::File;
 use std::path::PathBuf;
 
-use crate::document;
+use document;
 use crate::report::{Report, StdoutReport};
 use terraform;
 use crate::Run;

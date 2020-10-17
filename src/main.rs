@@ -5,11 +5,7 @@ use commands::Check;
 use commands::Show;
 
 mod commands;
-mod document;
 mod report;
-
-#[macro_use]
-extern crate lazy_static;
 
 #[derive(FromArgs)]
 /// Checks terraform files for patterns
@@ -38,8 +34,7 @@ fn main() {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::document::rule::Decision;
+    use document::rule::Decision;
 
     #[test]
     fn matches_the_rds() {
