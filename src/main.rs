@@ -99,7 +99,7 @@ resource "aws_rds_instance" $(*) {
     fn matches(tf: &str, doc_source: &str) -> bool {
         let doc = document::from_reader(doc_source.as_bytes()).expect("unable to create document");
 
-        let tf = terraform::parse(tf);
+        let tf = terraform::parse_text(&tf);
 
         doc.matches(&tf)
             .iter()

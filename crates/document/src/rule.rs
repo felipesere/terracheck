@@ -451,7 +451,7 @@ mod tests {
          }
         "#;
 
-        let backing_data = terraform::parse(terraform_text);
+        let backing_data = terraform::parse_text(&terraform_text);
 
         let m = r.matches(&backing_data);
 

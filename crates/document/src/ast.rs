@@ -59,7 +59,7 @@ mod tests {
         matches_sexp(
             AST::Container {
                 kind: "something".into(),
-                children: vec![Box::new(AST::Any)],
+                children: vec![AST::Any.into()],
             },
             "(something (*) )",
         )
@@ -70,7 +70,7 @@ mod tests {
         matches_sexp(
             AST::Container {
                 kind: "resource".into(),
-                children: vec![Box::new(AST::Any)],
+                children: vec![AST::Any.into()],
             },
             "(resource (*) ) @result",
         )

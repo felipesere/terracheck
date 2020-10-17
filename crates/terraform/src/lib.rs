@@ -43,14 +43,21 @@ impl BackingData {
     }
 }
 
+// temporary for testing?
+pub fn parse_text(input: &str) -> BackingData {
+    let mut parser = parser();
+    let tree = parser.parse(&input, None).unwrap();
+
+    BackingData { tree, input: input.to_string(), path: "unknown".into() }
+}
+
 pub fn parse(path: PathBuf) -> BackingData {
     let input = read_to_string(&path).unwrap();
-    let mut parser = parser();
-
-    let tree = parser.parse(&input, None).unwrap();
+    let mut backing_data = parse_text(&input);
     let path = path.to_string_lossy().into();
 
-    BackingData { tree, input, path }
+    backing_data.path = path;
+    backing_data
 }
 
 include!(concat!(env!("OUT_DIR"), "/is_container.rs"));
