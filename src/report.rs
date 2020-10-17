@@ -33,17 +33,23 @@ pub struct StdoutReport<'a, W: Write> {
     template: TinyTemplate<'a>,
 }
 
-
-impl<'a, W: Write> StdoutReport<'a, W> {
-    pub fn to(output: W) -> Self {
+impl <'a, W: Write> StdoutReport<'a, W> {
+    pub fn new(output: W) -> Self {
         let mut template = TinyTemplate::new();
         template.set_default_formatter(&format_unescaped);
         template.add_template("success_and_failure", TEMPLATE).unwrap();
         StdoutReport { output, template }
     }
+}
 
+/// Present the results to a user in a meaningful way
+pub trait Report {
+    fn about(&mut self, terraform: &BackingData, match_results: Vec<MatchResult>);
+}
+
+impl <'a, W: Write> Report for StdoutReport<'a, W> {
     // This needs to a single call, not a giant loop...
-    pub fn about(&mut self, terraform: &BackingData, match_results: Vec<MatchResult>) {
+    fn about(&mut self, terraform: &BackingData, match_results: Vec<MatchResult>) {
         let mut context = Context::default();
         if match_results.is_empty() {
             context.success.push(terraform.path.clone());
