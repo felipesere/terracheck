@@ -28,18 +28,18 @@ struct Context {
     success: Vec<String>,
 }
 
-pub struct Report<'a, W: Write> {
+pub struct StdoutReport<'a, W: Write> {
     output: W,
     template: TinyTemplate<'a>,
 }
 
 
-impl<'a, W: Write> Report<'a, W> {
+impl<'a, W: Write> StdoutReport<'a, W> {
     pub fn to(output: W) -> Self {
         let mut template = TinyTemplate::new();
         template.set_default_formatter(&format_unescaped);
         template.add_template("success_and_failure", TEMPLATE).unwrap();
-        Report { output, template }
+        StdoutReport { output, template }
     }
 
     // This needs to a single call, not a giant loop...
