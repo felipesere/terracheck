@@ -5,9 +5,9 @@ use std::path::PathBuf;
 
 use crate::document;
 use crate::report::{Report, StdoutReport};
-use crate::terraform;
+use terraform;
 use crate::Run;
-use crate::terraform::BackingData;
+use terraform::BackingData;
 
 #[derive(FromArgs)]
 /// Verifies if any terraform resource matches the rule in the markdown file

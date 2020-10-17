@@ -43,7 +43,7 @@ impl BackingData {
     }
 }
 
-pub(crate) fn parse(path: PathBuf) -> BackingData {
+pub fn parse(path: PathBuf) -> BackingData {
     let input = read_to_string(&path).unwrap();
     let mut parser = parser();
 

@@ -1,5 +1,5 @@
 use serde::Serialize;
-use crate::terraform::BackingData;
+use terraform::BackingData;
 use std::collections::HashMap;
 use std::io::Write;
 use tinytemplate::{format_unescaped, TinyTemplate};

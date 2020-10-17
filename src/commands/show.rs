@@ -14,7 +14,7 @@ pub struct Show {
 
 impl crate::Run for Show {
     fn run(self) {
-        let mut parser = crate::terraform::parser();
+        let mut parser = terraform::parser();
         for entry in glob("**/*.tf").expect("Failed to read glob pattern") {
             match entry {
                 Ok(path) => {

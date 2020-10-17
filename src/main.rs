@@ -7,7 +7,6 @@ use commands::Show;
 mod commands;
 mod document;
 mod report;
-mod terraform;
 
 #[macro_use]
 extern crate lazy_static;

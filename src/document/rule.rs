@@ -1,5 +1,4 @@
 use crate::document::ast::AST;
-use crate::terraform;
 use core::ops::Range;
 use regex::Regex;
 use std::fmt::{self, write, Write};
