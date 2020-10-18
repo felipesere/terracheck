@@ -4,7 +4,7 @@ use std::fs::File;
 use std::path::PathBuf;
 
 use document;
-use crate::report::{Report, StdoutReport};
+use report::{Report, StdoutReport};
 use terraform;
 use crate::Run;
 use terraform::BackingData;

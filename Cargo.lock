@@ -236,6 +236,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "26412eb97c6b088a6997e05f69403a802a92d520de2f8e63c2b65f9e0f47c4e8"
 
 [[package]]
+name = "report"
+version = "0.0.1"
+dependencies = [
+ "document",
+ "serde",
+ "serde_json",
+ "terraform",
+ "tinytemplate",
+]
+
+[[package]]
 name = "ryu"
 version = "1.0.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -292,10 +303,8 @@ dependencies = [
  "document",
  "glob",
  "pretty_assertions",
- "serde",
- "serde_json",
+ "report",
  "terraform",
- "tinytemplate",
 ]
 
 [[package]]

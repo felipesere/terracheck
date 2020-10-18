@@ -5,7 +5,6 @@ use commands::Check;
 use commands::Show;
 
 mod commands;
-mod report;
 
 #[derive(FromArgs)]
 /// Checks terraform files for patterns
