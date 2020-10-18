@@ -3,17 +3,9 @@ use std::fmt::{write, Write};
 
 #[derive(Debug)]
 pub enum AST {
-    Container {
-        kind: String,
-        children: Vec<Box<AST>>,
-    },
-    Fixed {
-        kind: String,
-        reference: String,
-    },
-    Referenced {
-        reference: String,
-    },
+    Container { kind: String, children: Vec<AST> },
+    Fixed { kind: String, reference: String },
+    Referenced { reference: String },
     Any,
 }
 

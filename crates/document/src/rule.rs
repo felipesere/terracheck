@@ -39,7 +39,7 @@ pub struct Rule {
 }
 
 impl Rule {
-    fn to_sexp(code: String, output: &mut dyn Write) -> fmt::Result {
+    fn convert_to_sexp(code: String, output: &mut dyn Write) -> fmt::Result {
         let mut parser = terraform::parser();
 
         let tree = parser.parse(&code, None).unwrap();
@@ -58,7 +58,7 @@ impl Rule {
 
     pub(crate) fn new(title: String, decision: Decision, code: String) -> Result<Self, String> {
         let mut rule_as_sexp = String::new();
-        Rule::to_sexp(code, &mut rule_as_sexp)
+        Rule::convert_to_sexp(code, &mut rule_as_sexp)
             .expect("TODO: this should be in infallable? I'm writing to a string...");
         let query = terraform::query(&rule_as_sexp);
 
@@ -179,7 +179,7 @@ struct True;
 
 impl Predicate for True {
     fn check(&self) -> bool {
-        return true;
+        true
     }
 }
 
@@ -326,36 +326,34 @@ fn ast(node: Node, source: &str, generator: &mut UniqueReferences) -> (Option<AS
         NodeKind::Query { value } => prcoess_query(value, generator),
         NodeKind::Container { kind, children } => {
             let mut queries = Vec::new();
-            let mut children_ast: Vec<Box<AST>> = Vec::new();
+            let mut children_ast = Vec::new();
             for child in children {
                 match ast(child, &source, generator) {
                     (None, _) => continue,
                     (Some(ast), mut new_queries) => {
-                        children_ast.push(Box::new(ast));
+                        children_ast.push(ast);
                         queries.append(&mut new_queries);
                     }
                 }
             }
-            return (
+            (
                 Some(AST::Container {
                     kind,
                     children: children_ast,
                 }),
                 queries,
-            );
+            )
         }
         NodeKind::Other { kind, value } => {
             let reference = generator.next();
-            return (
+            let values = vec![value];
+            (
                 Some(AST::Fixed {
                     kind,
                     reference: reference.clone(),
                 }),
-                vec![Query::Eq {
-                    reference: reference,
-                    values: vec![value],
-                }],
-            );
+                vec![Query::Eq { reference, values }],
+            )
         }
     }
 }
@@ -390,15 +388,15 @@ fn prcoess_query(value: String, generator: &mut UniqueReferences) -> (Option<AST
         );
     }
 
-    return (
+    (
         Some(AST::Referenced {
             reference: reference.clone(),
         }),
         vec![Query::Unknown {
             reference,
-            operation: operation,
+            operation,
         }],
-    );
+    )
 }
 
 #[cfg(test)]
@@ -416,7 +414,7 @@ mod tests {
         .into();
 
         let mut buffer = String::new();
-        Rule::to_sexp(code, &mut buffer).unwrap();
+        Rule::convert_to_sexp(code, &mut buffer).unwrap();
 
         assert_eq!(
             r#"((configuration (resource (resource_type) @1 (*) (block (attribute (identifier) @2 (*) ) ) ) @result )(#eq? @1 "\"aws_rds_instance\"") (#eq? @2 "size") )"#,

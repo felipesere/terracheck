@@ -33,11 +33,11 @@ impl crate::Run for Show {
                         if node.has_error() {
                             println!("{}", node.utf8_text(&content.as_bytes()).unwrap().red());
                             println!("{}", node.to_sexp().red());
-                            println!("");
+                            println!();
                         } else if !self.errors {
                             println!("{}", node.utf8_text(&content.as_bytes()).unwrap());
                             println!("{}", node.to_sexp());
-                            println!("");
+                            println!();
                         }
 
                         if !cursor.goto_next_sibling() {
@@ -45,7 +45,7 @@ impl crate::Run for Show {
                         }
                     }
 
-                    println!("");
+                    println!();
                 }
                 Err(e) => println!("{:?}", e),
             }

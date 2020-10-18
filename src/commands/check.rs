@@ -4,9 +4,7 @@ use std::fs::File;
 use std::path::PathBuf;
 
 use crate::Run;
-use document;
 use report::{Report, StdoutReport};
-use terraform;
 use terraform::BackingData;
 
 #[derive(FromArgs)]

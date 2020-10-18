@@ -6,7 +6,7 @@ use tinytemplate::{format_unescaped, TinyTemplate};
 
 use document::rule::{Decision, MatchResult};
 
-static TEMPLATE: &'static str = r#"{{ for value in success }}
+static TEMPLATE: &str = r#"{{ for value in success }}
 {value} ... ✅
 {{ endfor }}
 {{ for failure in failures }}
@@ -60,7 +60,9 @@ impl<'a, W: Write> Report for StdoutReport<'a, W> {
         let mut results_for_node: HashMap<NodeId, Vec<MatchResult>> = HashMap::new();
 
         for m in match_results {
-            let resources = results_for_node.entry(m.node_info.id).or_insert(Vec::new());
+            let resources = results_for_node
+                .entry(m.node_info.id)
+                .or_insert_with(Vec::new);
             resources.push(m);
         }
 
