@@ -1,6 +1,6 @@
 use std::fs::read_to_string;
-use std::path::PathBuf;
 use std::ops::Range;
+use std::path::PathBuf;
 use tree_sitter::{Language, Node, Parser, Query, Tree};
 
 extern "C" {
@@ -48,7 +48,11 @@ pub fn parse_text(input: &str) -> BackingData {
     let mut parser = parser();
     let tree = parser.parse(&input, None).unwrap();
 
-    BackingData { tree, input: input.to_string(), path: "unknown".into() }
+    BackingData {
+        tree,
+        input: input.to_string(),
+        path: "unknown".into(),
+    }
 }
 
 pub fn parse(path: PathBuf) -> BackingData {

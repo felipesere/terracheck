@@ -52,7 +52,6 @@ fn main() {
         containers = containers
     );
 
-
     let out_dir = std::env::var_os("OUT_DIR").unwrap();
     let dest_path = std::path::Path::new(&out_dir).join("is_container.rs");
     std::fs::write(&dest_path, rust_code.as_bytes()).unwrap();

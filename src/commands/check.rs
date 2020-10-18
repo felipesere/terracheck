@@ -3,10 +3,10 @@ use glob::glob;
 use std::fs::File;
 use std::path::PathBuf;
 
+use crate::Run;
 use document;
 use report::{Report, StdoutReport};
 use terraform;
-use crate::Run;
 use terraform::BackingData;
 
 #[derive(FromArgs)]
@@ -34,7 +34,10 @@ impl Run for Check {
             vec![self.path]
         };
 
-        let tf_files_to_check: Vec<BackingData> = paths_in("**/*.tf").into_iter().map(terraform::parse).collect();
+        let tf_files_to_check: Vec<BackingData> = paths_in("**/*.tf")
+            .into_iter()
+            .map(terraform::parse)
+            .collect();
 
         for path in files {
             let file = File::open(path).expect("could not open rule file");

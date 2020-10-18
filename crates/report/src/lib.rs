@@ -1,12 +1,12 @@
 use serde::Serialize;
-use terraform::BackingData;
 use std::collections::HashMap;
 use std::io::Write;
+use terraform::BackingData;
 use tinytemplate::{format_unescaped, TinyTemplate};
 
 use document::rule::{Decision, MatchResult};
 
-static TEMPLATE : &'static str = r#"{{ for value in success }}
+static TEMPLATE: &'static str = r#"{{ for value in success }}
 {value} ... ✅
 {{ endfor }}
 {{ for failure in failures }}
@@ -33,11 +33,13 @@ pub struct StdoutReport<'a, W: Write> {
     template: TinyTemplate<'a>,
 }
 
-impl <'a, W: Write> StdoutReport<'a, W> {
+impl<'a, W: Write> StdoutReport<'a, W> {
     pub fn new(output: W) -> Self {
         let mut template = TinyTemplate::new();
         template.set_default_formatter(&format_unescaped);
-        template.add_template("success_and_failure", TEMPLATE).unwrap();
+        template
+            .add_template("success_and_failure", TEMPLATE)
+            .unwrap();
         StdoutReport { output, template }
     }
 }
@@ -47,7 +49,7 @@ pub trait Report {
     fn about(&mut self, terraform: &BackingData, match_results: Vec<MatchResult>);
 }
 
-impl <'a, W: Write> Report for StdoutReport<'a, W> {
+impl<'a, W: Write> Report for StdoutReport<'a, W> {
     // This needs to a single call, not a giant loop...
     fn about(&mut self, terraform: &BackingData, match_results: Vec<MatchResult>) {
         let mut context = Context::default();
@@ -65,17 +67,25 @@ impl <'a, W: Write> Report for StdoutReport<'a, W> {
         for results in results_for_node.values() {
             let any_allow = results.iter().any(|m| m.decision == Decision::Allow);
             if !any_allow {
-                let dennial = results.iter().find(|m| m.decision == Decision::Deny).unwrap();
+                let dennial = results
+                    .iter()
+                    .find(|m| m.decision == Decision::Deny)
+                    .unwrap();
 
                 context.failures.push(Failure {
                     file: terraform.path.clone(),
-                    code: terraform.text_range(&dennial.node_info.byte_range).to_string(),
+                    code: terraform
+                        .text_range(&dennial.node_info.byte_range)
+                        .to_string(),
                 });
             } else {
                 context.success.push(terraform.path.clone())
             }
         }
-        let rendered = self.template.render("success_and_failure", &context).unwrap();
+        let rendered = self
+            .template
+            .render("success_and_failure", &context)
+            .unwrap();
         write!(self.output, "{}", rendered).expect("TODO: should we lift this?");
     }
 }

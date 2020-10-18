@@ -1,4 +1,3 @@
-use terraform::BackingData;
 use pulldown_cmark::{
     Event::{Start, Text},
     Parser,
@@ -6,6 +5,7 @@ use pulldown_cmark::{
 };
 use rule::{Decision, MatchResult, Rule};
 use std::io::Read;
+use terraform::BackingData;
 
 #[macro_use]
 extern crate lazy_static;
