@@ -1,6 +1,5 @@
 use argh::FromArgs;
 use glob::glob;
-use std::fs::File;
 use std::path::PathBuf;
 
 use crate::Run;
@@ -25,7 +24,7 @@ fn paths_in(path: &str) -> Vec<PathBuf> {
 impl Run for Check {
     fn run(self) {
         let mut report = StdoutReport::new(std::io::stdout());
-        let files = if self.path.is_dir() {
+        let rule_paths = if self.path.is_dir() {
             let pattern = format!("{}/*.md", self.path.to_string_lossy());
             paths_in(&pattern)
         } else {
@@ -37,12 +36,16 @@ impl Run for Check {
             .map(terraform::parse)
             .collect();
 
-        for path in files {
-            let file = File::open(path).expect("could not open rule file");
-            let rule = document::from_reader(&file).expect("was not able to parse markdown");
+        let all_document: Vec<document::Document> = rule_paths
+            .into_iter()
+            .filter_map(document::from_path)
+            .collect();
 
+        for doc in all_document {
             for backing_data in tf_files_to_check.iter() {
-                report.about(backing_data, rule.matches(&backing_data));
+                let rule_matches = doc.matches(&backing_data);
+
+                report.about(backing_data, rule_matches);
             }
         }
     }

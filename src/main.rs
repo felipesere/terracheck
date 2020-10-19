@@ -34,6 +34,7 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use document::rule::Decision;
+    use tempfile::tempdir;
 
     #[test]
     fn matches_the_rds() {
@@ -96,7 +97,15 @@ resource "aws_rds_instance" $(*) {
     }
 
     fn matches(tf: &str, doc_source: &str) -> bool {
-        let doc = document::from_reader(doc_source.as_bytes()).expect("unable to create document");
+        use std::fs::File;
+        use std::io::Write;
+
+        let dir = tempdir().unwrap();
+        let file_path = dir.path().join("rule.md");
+        let mut file = File::create(&file_path).unwrap();
+        write!(&mut file, "{}", doc_source).expect("unabke to write source to temp file");
+
+        let doc = document::from_path(file_path).expect("unable to create document");
 
         let tf = terraform::parse_text(&tf);
 

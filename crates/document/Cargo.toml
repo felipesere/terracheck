@@ -15,3 +15,4 @@ terraform = { path = "../terraform" }
 
 [dev-dependencies]
 pretty_assertions = "0.6.1"
+tempfile = "3.1.0"
